@@ -76,6 +76,9 @@ uv run nbapredicts backtest           # walk-forward evaluation -> site/data/bac
 uv run pytest
 ```
 
+The workflow commits data to `main` twice a day, so `git pull --rebase` before
+pushing code changes.
+
 On a Mac whose Documents folder syncs to iCloud, keep the environment out of
 iCloud (it evicts files when the disk fills up, and imports then hang):
 `mkdir .venv.nosync && ln -s .venv.nosync .venv` before `uv sync`. The ESPN

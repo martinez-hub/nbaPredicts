@@ -45,7 +45,7 @@ jobs:
           key: hf-timesfm-2.5-200m-pytorch
 
       - name: Run the daily pipeline
-        run: uv run nbapredicts --cache "$RUNNER_TEMP/espn" daily
+        run: uv run --frozen nbapredicts --cache "$RUNNER_TEMP/espn" daily
 
       # The backtest takes several minutes: Monday mornings, on request, or
       # whenever its output is missing.
@@ -56,7 +56,7 @@ jobs:
         run: |
           if [ "$REQUESTED" = "true" ] || [ ! -f site/data/backtest.json ] ||
              { [ "$SCHEDULE" = "15 10 * * *" ] && [ "$(date -u +%u)" = "1" ]; }; then
-            uv run nbapredicts --cache "$RUNNER_TEMP/espn" backtest
+            uv run --frozen nbapredicts --cache "$RUNNER_TEMP/espn" backtest
           else
             echo "skipping the backtest today"
           fi
@@ -70,7 +70,9 @@ jobs:
             echo "no changes"
           else
             git commit -m "data: $(date -u +%Y-%m-%dT%H:%MZ)"
-            git push
+            # A code push may have landed while this run was working.
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
 
       - uses: actions/configure-pages@v6

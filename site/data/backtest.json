@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-27T10:25:17Z",
+ "generated_at": "2026-10-27T10:32:04Z",
  "winner": {
   "seasons": [
    {
@@ -169,5 +169,46 @@
     "ece": 0.0115
    }
   ]
+ },
+ "forecast": {
+  "season": 2026,
+  "team_points": {
+   "n": 2636,
+   "mae": 9.7863,
+   "baseline_mae": 10.3457,
+   "rmse": 12.3102,
+   "coverage_80": 0.7712
+  },
+  "winner_from_points_accuracy": 0.6442,
+  "players": {
+   "pts": {
+    "n": 3000,
+    "mae": 4.5589,
+    "baseline_mae": 4.5782,
+    "rmse": 6.0116,
+    "coverage_80": 0.7987
+   },
+   "reb": {
+    "n": 3000,
+    "mae": 1.8701,
+    "baseline_mae": 1.9089,
+    "rmse": 2.5134,
+    "coverage_80": 0.789
+   },
+   "ast": {
+    "n": 3000,
+    "mae": 1.3316,
+    "baseline_mae": 1.3677,
+    "rmse": 1.8468,
+    "coverage_80": 0.789
+   },
+   "fg3m": {
+    "n": 3000,
+    "mae": 0.8732,
+    "baseline_mae": 0.9008,
+    "rmse": 1.2926,
+    "coverage_80": 0.7987
+   }
+  }
  }
 }

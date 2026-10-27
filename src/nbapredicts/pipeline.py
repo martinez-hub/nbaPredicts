@@ -92,6 +92,8 @@ def log_predictions(
 ) -> pd.DataFrame:
     """Upsert ``new`` into the ``name`` log, never touching started games."""
     old = store.load(name)
+    if new.empty:  # no slate (offseason, or nothing scheduled yet)
+        return old
     if not old.empty:
         started = set(games.loc[games["status"] != "scheduled", "game_id"])
         # Rows for games that have started are frozen; the rest are replaced.

@@ -73,3 +73,10 @@ def test_prediction_log_freezes_started_games(tmp_path):
     logged = store.load("predictions").set_index("game_id")["p_home"]
     assert logged["1"] == 0.6  # started: kept the pre-tip prediction
     assert logged["2"] == 0.1  # not started: refreshed
+
+
+def test_prediction_log_ignores_an_empty_slate(tmp_path):
+    store = Store(tmp_path)
+    games = pd.DataFrame({"game_id": ["1"], "status": ["final"], "season": [2027]})
+    out = log_predictions(store, "predictions", pd.DataFrame(), ["game_id"], games)
+    assert out.empty
