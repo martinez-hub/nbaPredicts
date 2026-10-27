@@ -26,7 +26,7 @@ from .collect import (
     fetch_injuries,
     update,
 )
-from .espn import ESPNClient, ESPNError, fetch_rosters, parse_odds
+from .espn import ESPNClient, fetch_rosters
 from .features import (
     FEATURES,
     build_features,
@@ -46,6 +46,7 @@ from .forecast import (
     team_frame,
 )
 from .injuries import combine, official_injuries
+from .market import fetch_odds
 from .winner import WinnerConfig, WinnerModel, fit
 
 log = logging.getLogger(__name__)
@@ -110,24 +111,44 @@ def gather_injuries(
 
 
 def fetch_market(client: ESPNClient, upcoming: pd.DataFrame) -> dict[str, dict]:
-    """Sportsbook lines ESPN shows for the slate, keyed by game id.
+    """Current consensus lines for the slate, keyed by game id.
 
-    Shown next to EQUINE's pick and logged for the season comparison; the
-    model never sees them.
+    Same source and margin removal (power method, median across books) as
+    the historical lines in ``data/odds``, so live and training values agree.
     """
-    lines: dict[str, dict] = {}
-    for day in sorted(set(upcoming["date"])):
-        try:
-            events = client.scoreboard(pd.Timestamp(day).strftime("%Y%m%d"))
-        except ESPNError as err:
-            log.warning("odds for %s failed: %s", day, err)
-            continue
-        for event in events:
-            odds = parse_odds(event)
-            if odds is not None and odds["p_market"] is not None:
-                lines[odds["game_id"]] = odds
+    odds = fetch_odds(client, upcoming["game_id"].tolist())
+    lines = {}
+    for r in odds.itertuples(index=False):
+        lines[r.game_id] = {
+            "game_id": r.game_id,
+            "books": int(r.books),
+            "p_market": float(r.p_close),
+            "spread": None if pd.isna(r.spread_close) else float(r.spread_close),
+            "p_open": None if pd.isna(r.p_open) else float(r.p_open),
+        }
     log.info("market lines for %d of %d games", len(lines), len(upcoming))
     return lines
+
+
+def update_odds(store: Store, client: ESPNClient, games: pd.DataFrame) -> int:
+    """Closing lines for finished games not yet in ``data/odds``.
+
+    The last three days are refetched so a line captured before tip-off is
+    replaced by the final close.
+    """
+    odds = store.load("odds")
+    finals = games[games["status"] == "final"]
+    have = set(odds["game_id"]) if not odds.empty else set()
+    recent = finals["start"] >= finals["start"].max() - pd.Timedelta(days=3)
+    todo = finals[~finals["game_id"].isin(have) | recent]
+    if todo.empty:
+        return 0
+    new = fetch_odds(client, todo["game_id"].tolist())
+    new["season"] = new["game_id"].map(finals.set_index("game_id")["season"])
+    if not odds.empty:
+        new = pd.concat([odds[~odds["game_id"].isin(new["game_id"])], new])
+    store.save("odds", new)
+    return len(todo)
 
 
 # --------------------------------------------------------------------------
@@ -276,6 +297,8 @@ def daily(
         log.info("collect: %s", update(store, client, [season]))
 
     games = store.load("games")
+    if collect:
+        log.info("odds: %d games updated", update_odds(store, client, games))
     team_box = store.load("team_box")
     player_box = store.load("player_box")
     teams = load_teams(client, store.data_dir / "teams.json")

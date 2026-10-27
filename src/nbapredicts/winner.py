@@ -39,6 +39,10 @@ class WinnerConfig:
     lr: float = 3e-4
     weight_decay: float = 1e-2
     calib_frac: float = 0.08  # most recent games: early stopping + temperature
+    # EquineGP hard-codes 25; SNGP's default is pi/8. Larger values shrink each
+    # logit harder toward 50/50 in proportion to the GP's variance. Not stored
+    # in EQUINE's checkpoint, so WinnerModel.save/load carry it.
+    mean_field_factor: float = 25.0
     seed: int = 0
 
 
@@ -87,6 +91,7 @@ class WinnerModel:
             "mean": self.mean.tolist(),
             "std": self.std.tolist(),
             "var_reference": self.var_reference.tolist(),
+            "mean_field_factor": self.model.model.mean_field_factor,
         }
         (directory / "winner_meta.json").write_text(json.dumps(meta))
 
@@ -95,6 +100,8 @@ class WinnerModel:
         model = eq.load_equine_model(str(directory / "equine_gp.pt"), device="cpu")
         assert isinstance(model, eq.EquineGP)
         meta = json.loads((directory / "winner_meta.json").read_text())
+        mff = meta.get("mean_field_factor", model.model.mean_field_factor)
+        model.mean_field_factor = model.model.mean_field_factor = mff
         return cls(
             model=model,
             mean=np.array(meta["mean"]),
@@ -137,6 +144,8 @@ def fit(
         feature_names=features,
         label_names=LABELS,
     )
+    model.mean_field_factor = config.mean_field_factor
+    model.model.mean_field_factor = config.mean_field_factor
     wm = WinnerModel(model, mean, std, np.array([0.0]), features)
 
     def dataset(df: pd.DataFrame) -> TensorDataset:

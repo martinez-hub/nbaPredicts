@@ -273,6 +273,7 @@ SORT_KEYS = {
     "games": ["start", "game_id"],
     "team_box": ["game_id", "team_id"],
     "player_box": ["game_id", "team_id", "athlete_id"],
+    "odds": ["game_id"],
 }
 
 
