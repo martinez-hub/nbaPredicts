@@ -48,6 +48,7 @@ from .forecast import (
 from .injuries import combine, official_injuries
 from .market import fetch_odds
 from .stack import StackedWinner
+from .text_log import log_text
 from .winner import WinnerConfig, WinnerModel, fit
 
 log = logging.getLogger(__name__)
@@ -315,6 +316,7 @@ def daily(
         client, upcoming_ids, season, now, teams, rosters
     )
     market = fetch_market(client, upcoming)
+    log_text(store, client, now, season)
     log.info("%d upcoming games, %d injury entries", len(upcoming_ids), len(injuries))
 
     state = team_state(games, team_box, pv, upcoming_ids, injuries, rosters)
