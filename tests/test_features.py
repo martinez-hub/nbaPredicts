@@ -98,3 +98,32 @@ def test_rosters_follow_each_team_not_the_calendar(league):
     pv = player_values(player_box, games)
     rosters = current_rosters(pv)
     assert rosters.groupby("team_id")["athlete_id"].nunique().min() == 9
+
+
+def test_upcoming_availability_weights_players_by_chance_of_playing(league):
+    from nbapredicts.features import availability, current_rosters
+
+    games, _, player_box = league
+    pv = player_values(player_box, games)
+    upcoming = games.tail(1)
+    team = upcoming["home_id"].iloc[0]
+    star = (
+        current_rosters(pv).query("team_id == @team").sort_values("post_value").iloc[-1]
+    )
+
+    def strength(p_play: float) -> float:
+        inj = pd.DataFrame(
+            {
+                "team_id": [team],
+                "athlete_id": [star["athlete_id"]],
+                "name": ["x"],
+                "status": ["Questionable"],
+                "p_play": [p_play],
+            }
+        )
+        a = availability(pv, upcoming, inj)
+        return a[
+            (a["game_id"] == upcoming["game_id"].iloc[0]) & (a["team_id"] == team)
+        ]["avail"].iloc[-1]
+
+    assert strength(0.0) < strength(0.5) < strength(1.0)

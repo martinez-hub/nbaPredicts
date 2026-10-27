@@ -76,3 +76,36 @@ def test_clean_drops_nan_and_numpy_types():
         }
     )
     assert out == {"a": 0.5, "b": None, "c": [3], "d": True}
+
+
+def test_track_record_compares_with_the_market_on_the_same_games():
+    games = schedule(
+        ["2026-10-25T23:30Z", "2026-10-26T23:30Z", "2026-10-26T23:45Z"], status="final"
+    )
+    games["home_pts"] = [110.0, 100.0, 99.0]
+    games["away_pts"] = [100.0, 104.0, 90.0]
+    preds = pd.DataFrame(
+        {
+            "game_id": ["0", "1", "2"],
+            "season": [2027] * 3,
+            "start": games["start"],
+            "home_id": ["a", "b", "c"],
+            "away_id": ["b", "a", "d"],
+            "p_home": [0.7, 0.6, 0.4],
+            "p_market": [0.8, 0.3, np.nan],  # no line for the third game
+            "pred_home_pts": [112.0, 108.0, 100.0],
+            "pred_away_pts": [104.0, 101.0, 101.0],
+        }
+    )
+    record, _ = track_record(
+        preds,
+        pd.DataFrame(),
+        games,
+        pd.DataFrame(),
+        2027,
+        pd.Timestamp("2026-10-27T12:00Z"),
+    )
+    vs = record["vs_market"]
+    assert vs["n"] == 2
+    assert vs["equine_correct"] == 1 and vs["market_correct"] == 2
+    assert np.isclose(vs["market_brier"], ((0.8 - 1) ** 2 + 0.3**2) / 2)

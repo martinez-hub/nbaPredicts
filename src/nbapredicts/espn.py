@@ -150,3 +150,44 @@ def _is_final(summary: dict[str, Any]) -> bool:
     except (KeyError, IndexError):
         return False
     return bool(status.get("completed")) and status.get("name") == "STATUS_FINAL"
+
+
+def _american(odds: object) -> float | None:
+    try:
+        value = float(str(odds).replace("+", ""))
+    except (TypeError, ValueError):
+        return None
+    return value if value <= -100 or value >= 100 else None
+
+
+def implied_probability(american: float) -> float:
+    """Win probability an American moneyline implies, margin included."""
+    return 100 / (american + 100) if american > 0 else -american / (-american + 100)
+
+
+def parse_odds(event: dict[str, Any]) -> dict[str, Any] | None:
+    """The first sportsbook line on a scoreboard event, home-team perspective.
+
+    ``p_home`` is the moneyline probability with the bookmaker's margin
+    removed (the two implied probabilities rescaled to sum to one).
+    """
+    lines = event.get("competitions", [{}])[0].get("odds") or []
+    if not lines:
+        return None
+    line = lines[0]
+    ml = line.get("moneyline") or {}
+    home = _american(((ml.get("home") or {}).get("close") or {}).get("odds"))
+    away = _american(((ml.get("away") or {}).get("close") or {}).get("odds"))
+    p_home = None
+    if home is not None and away is not None:
+        ph, pa = implied_probability(home), implied_probability(away)
+        p_home = ph / (ph + pa)
+    return {
+        "game_id": str(event["id"]),
+        "provider": (line.get("provider") or {}).get("name"),
+        "spread": line.get("spread"),
+        "total": line.get("overUnder"),
+        "ml_home": home,
+        "ml_away": away,
+        "p_market": p_home,
+    }

@@ -49,6 +49,7 @@ class TimesFM:
         # four player stats, with 80% intervals covering ~78% of outcomes.
         xreg_mode: str | None = "xreg + timesfm",
         ridge: float = 1.0,
+        quantile_head: bool = True,
     ) -> None:
         import timesfm  # heavy import; keep the rest of the package light
 
@@ -62,7 +63,10 @@ class TimesFM:
                 max_context=max_context,
                 max_horizon=max_horizon,
                 normalize_inputs=True,
-                use_continuous_quantile_head=True,
+                # Off when the point head is fine-tuned: its own nine
+                # deciles then give the intervals, and the separate quantile
+                # head (untrained on NBA data) is not consulted.
+                use_continuous_quantile_head=quantile_head,
                 force_flip_invariance=True,
                 infer_is_positive=True,
                 fix_quantile_crossing=True,

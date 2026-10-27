@@ -4,8 +4,8 @@ name: daily
 # the next slate with TimesFM, commit the data, and redeploy the JSON to Pages.
 on:
   schedule:
-    - cron: "15 10 * * *" # 10:15 UTC (6:15 ET): every game of the night is final
-    - cron: "30 21 * * *" # 21:30 UTC (5:30 ET): refresh with the afternoon injury report
+    - cron: "15 10 * * *" # 10:15 UTC (6:15 EDT / 5:15 EST): every game of the night is final
+    - cron: "30 21 * * *" # 21:30 UTC (5:30 EDT / 4:30 EST): the afternoon injury report
   workflow_dispatch:
     inputs:
       backtest:

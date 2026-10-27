@@ -18,7 +18,6 @@ import argparse
 import json
 import os
 import re
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -62,38 +61,50 @@ def main() -> int:
         branch = nxt["head"]["ref"]
 
     if not chain:
-        print("no open PR stack on main", file=sys.stderr)
-        return 1
-
-    base = "main"
-    for p in chain:
-        cmp = gh(f"/repos/{REPO}/compare/{base}...{p['head']['ref']}")
-        status = (
-            "ok" if cmp["behind_by"] == 0 else f"BEHIND {base} by {cmp['behind_by']}"
-        )
-        print(f"#{p['number']:<4} {p['head']['ref']:<40} {status}  {p['title']}")
-        if cmp["behind_by"]:
-            print("the stack is not linear; refusing to pin", file=sys.stderr)
-            return 1
-        base = p["head"]["ref"]
-
-    tip = chain[-1]
-    sha = tip["head"]["sha"]
-    print(f"\ntip: {tip['head']['ref']} @ {sha}")
+        # Everything merged: the newest code is main itself.
+        main_sha = gh(f"/repos/{REPO}/branches/main")["commit"]["sha"]
+        tip_branch, sha = "main", main_sha
+        print(f"no open PR stack on main; tip: main @ {sha}")
+    else:
+        base = "main"
+        for p in chain:
+            cmp = gh(f"/repos/{REPO}/compare/{base}...{p['head']['ref']}")
+            behind = cmp["behind_by"]
+            status = "ok" if behind == 0 else f"BEHIND {base} by {behind}"
+            print(f"#{p['number']:<4} {p['head']['ref']:<40} {status}  {p['title']}")
+            if behind:
+                # Mid-rebase: the tip would miss commits below it. Keep the
+                # current pin and try again next run.
+                print(
+                    "::warning::the EQUINE PR stack is not linear "
+                    f"(#{p['number']} is behind {base}); keeping the current pin"
+                )
+                return 0
+            base = p["head"]["ref"]
+        tip_branch, sha = chain[-1]["head"]["ref"], chain[-1]["head"]["sha"]
+        print(f"\ntip: {tip_branch} @ {sha}")
     left_out = sorted(
         p["number"] for p in prs if p["number"] not in {c["number"] for c in chain}
     )
     if left_out:
         print(f"open PRs outside the stack (not included): {left_out}")
 
+    stack_file = ROOT / "equine_stack.json"
+    prs_in_stack = [p["number"] for p in chain]
+    if stack_file.exists():
+        current = json.loads(stack_file.read_text())
+        if current.get("commit") == sha and current.get("prs") == prs_in_stack:
+            print("pin is already at the tip; nothing to do")
+            return 0
+
     if args.write:
-        (ROOT / "equine_stack.json").write_text(
+        stack_file.write_text(
             json.dumps(
                 {
                     "repo": REPO,
-                    "branch": tip["head"]["ref"],
+                    "branch": tip_branch,
                     "commit": sha,
-                    "prs": [p["number"] for p in chain],
+                    "prs": prs_in_stack,
                     "outside_stack": left_out,
                     "resolved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 },

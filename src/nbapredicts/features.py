@@ -254,6 +254,26 @@ def current_rosters(pv: pd.DataFrame, recent_games: int = 10) -> pd.DataFrame:
     return roster[["athlete_id", "name", "team_id", "post_value"]]
 
 
+def expected_top_sum(
+    values: np.ndarray, p_play: np.ndarray, samples: int = 512, seed: int = 0
+) -> float:
+    """Expected sum of the ``ROTATION`` best values among players who suit up.
+
+    Each player plays independently with probability ``p_play``. Weighting
+    values by ``p_play`` before choosing the top players would let a 50/50
+    star drop below a healthy reserve and count for nothing; sampling who
+    plays gives the real expectation.
+    """
+    if len(values) == 0:
+        return float("nan")
+    values = np.nan_to_num(values, nan=REPLACEMENT_GMSC)
+    rng = np.random.default_rng(seed)
+    plays = rng.random((samples, len(values))) < p_play
+    played = np.where(plays, values, -np.inf)
+    top = -np.sort(-played, axis=1)[:, :ROTATION]
+    return float(np.where(np.isfinite(top), top, 0.0).sum(axis=1).mean())
+
+
 def availability(
     pv: pd.DataFrame,
     upcoming: pd.DataFrame,
@@ -262,8 +282,9 @@ def availability(
     """Top-``ROTATION`` summed player value for each (game, team).
 
     Past games: the players who actually played, valued before the game.
-    Upcoming games: the current roster (see ``current_rosters``) minus players
-    ESPN lists as Out.
+    Upcoming games: the current roster (see ``current_rosters``), each player's
+    value weighted by his chance of playing (``p_play`` from the injury
+    report; without it, players listed Out are dropped).
     """
     past = _top_sum(pv["prior_value"], [pv["game_id"], pv["team_id"]])
     past = (
@@ -275,16 +296,22 @@ def availability(
         return past
 
     roster = current_rosters(pv)
+    roster["p_play"] = 1.0
     if injuries is not None and not injuries.empty:
-        out = set(injuries.loc[injuries["status"].str.lower() == "out", "athlete_id"])
-        roster = roster[~roster["athlete_id"].isin(out)]
-    strength = (
-        roster.sort_values("post_value", ascending=False)
-        .groupby("team_id")
-        .head(ROTATION)
-        .groupby("team_id")["post_value"]
-        .sum()
-    )
+        if "p_play" in injuries:
+            p_play = injuries.set_index("athlete_id")["p_play"]
+            roster["p_play"] = roster["athlete_id"].map(p_play).fillna(1.0)
+        else:
+            out = injuries["status"].str.lower() == "out"
+            roster.loc[
+                roster["athlete_id"].isin(injuries.loc[out, "athlete_id"]), "p_play"
+            ] = 0.0
+    strength = {
+        tid: expected_top_sum(
+            rows["post_value"].to_numpy(float), rows["p_play"].to_numpy(float)
+        )
+        for tid, rows in roster.groupby("team_id")
+    }
     rows = []
     for g in upcoming.itertuples(index=False):
         for tid in (g.home_id, g.away_id):

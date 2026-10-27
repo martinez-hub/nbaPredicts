@@ -1,0 +1,59 @@
+name: equine-stack
+
+# Keep EQUINE at the newest open work: every morning, before the daily run,
+# re-resolve the tip of the open-PR stack on mit-ll-responsible-ai/equine.
+# When it has moved, re-pin, re-lock and run the tests; push the new pin only
+# if they pass. A failure leaves the previous pin in place and fails the run.
+on:
+  schedule:
+    - cron: "40 9 * * *" # 35 minutes before the morning daily run
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily # shared with the daily job, so their pushes never race
+  cancel-in-progress: false
+
+jobs:
+  follow-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TQDM_DISABLE: "1"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Resolve the stack tip
+        id: tip
+        run: |
+          uv run --frozen python scripts/equine_stack_tip.py --write
+          if git diff --quiet -- pyproject.toml equine_stack.json; then
+            echo "moved=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "moved=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Re-lock and test against the new tip
+        if: steps.tip.outputs.moved == 'true'
+        run: |
+          uv lock
+          uv sync --frozen
+          uv run --frozen pytest -q
+
+      - name: Push the new pin
+        if: steps.tip.outputs.moved == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock equine_stack.json
+          sha=$(python3 -c "import json; print(json.load(open('equine_stack.json'))['commit'][:7])")
+          git commit -m "deps: follow the EQUINE PR stack to $sha"
+          git pull --rebase origin main
+          git push origin HEAD:main

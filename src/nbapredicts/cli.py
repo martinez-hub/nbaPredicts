@@ -29,6 +29,7 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("daily", help="collect, retrain, forecast and publish")
     p.add_argument("--no-collect", action="store_true")
+    p.add_argument("--no-finetune", action="store_true", help="use TimesFM as released")
 
     p = sub.add_parser("backtest", help="walk-forward evaluation of both models")
     p.add_argument("--seasons", type=int, nargs="+", default=None)
@@ -59,12 +60,21 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "daily":
         from .pipeline import daily
 
-        result = daily(root, store, client, collect=not args.no_collect)
+        result = daily(
+            root,
+            store,
+            client,
+            collect=not args.no_collect,
+            finetune=not args.no_finetune,
+        )
         print(json.dumps(result, default=str))
 
     elif args.command == "backtest":
+        import pandas as pd
+
         from .backtest import backtest_forecasts, backtest_winner
         from .features import build_features, player_values, team_state
+        from .finetune import finetune_point_head, training_series
         from .forecast import TimesFM, player_frame, team_frame
         from .pipeline import write_backtest
 
@@ -79,20 +89,37 @@ def main(argv: list[str] | None = None) -> None:
         winner = backtest_winner(feats, seasons)
         if args.winner_only:
             previous = json.loads((root / "site/data/backtest.json").read_text())
-            write_backtest(
-                root, {"winner": winner, "forecast": previous.get("forecast")}
-            )
+            kept = {
+                k: v for k, v in previous.items() if k not in ("winner", "generated_at")
+            }
+            write_backtest(root, {"winner": winner, **kept})
             print(json.dumps({"winner": winner["seasons"]}))
             return
         write_backtest(root, {"winner": winner})  # keep it if TimesFM fails
-        tfm = TimesFM()
+        tfm = TimesFM(quantile_head=False)
         tf = team_frame(state)
         pf = player_frame(pv, tf)
-        forecasts = backtest_forecasts(
-            tfm, tf, pf, seasons[-1], sample=args.player_sample
+        season = seasons[-1]
+        zero_shot = backtest_forecasts(tfm, tf, pf, season, sample=args.player_sample)
+        # Fine-tune once on everything before the test season, then forecast
+        # the whole season with that head: stricter than the daily job, which
+        # refreshes the head every morning.
+        start = tf.loc[tf["season"] == season, "start"].min()
+        series, ends, limits = training_series(
+            tf, pf, start, start - pd.Timedelta(days=3 * 365)
         )
-        write_backtest(root, {"winner": winner, "forecast": forecasts})
-        print(json.dumps({"winner": winner["seasons"], "forecast": forecasts}))
+        tune = finetune_point_head(tfm.model.model, series, ends, limits)
+        tuned = backtest_forecasts(tfm, tf, pf, season, sample=args.player_sample)
+        write_backtest(
+            root,
+            {
+                "winner": winner,
+                "forecast": tuned,
+                "forecast_zero_shot": zero_shot,
+                "fine_tune": tune,
+            },
+        )
+        print(json.dumps({"winner": winner["seasons"], "forecast": tuned}))
 
 
 if __name__ == "__main__":

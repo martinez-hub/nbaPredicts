@@ -17,6 +17,7 @@ dependencies = [
     "requests>=2.32",
     "scikit-learn>=1.5",
     "jax>=0.4.30",
+    "pypdf>=5",
 ]
 
 [dependency-groups]

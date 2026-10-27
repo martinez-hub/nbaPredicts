@@ -26,7 +26,7 @@ from .collect import (
     fetch_injuries,
     update,
 )
-from .espn import ESPNClient
+from .espn import ESPNClient, ESPNError, parse_odds
 from .features import (
     FEATURES,
     build_features,
@@ -34,6 +34,7 @@ from .features import (
     player_values,
     team_state,
 )
+from .finetune import daily_finetune
 from .forecast import (
     COVARIATES,
     MODEL_ID,
@@ -44,6 +45,7 @@ from .forecast import (
     player_frame,
     team_frame,
 )
+from .injuries import combine, official_injuries
 from .winner import WinnerConfig, WinnerModel, fit
 
 log = logging.getLogger(__name__)
@@ -80,6 +82,52 @@ def load_teams(client: ESPNClient, path: Path) -> dict[str, dict[str, Any]]:
     }
     path.write_text(json.dumps(teams, indent=1, sort_keys=True) + "\n")
     return teams
+
+
+def gather_injuries(
+    client: ESPNClient,
+    upcoming_ids: list[str],
+    season: int,
+    now: pd.Timestamp,
+    teams: dict[str, dict[str, Any]],
+    rosters: pd.DataFrame,
+) -> tuple[pd.DataFrame, str]:
+    """ESPN's injury list, refined by the NBA's official report when reachable.
+
+    Never raises: if the official report is blocked or does not parse, the run
+    goes on with ESPN's list alone.
+    """
+    espn = fetch_injuries(client, upcoming_ids)
+    official, source = pd.DataFrame(), "ESPN"
+    if upcoming_ids:
+        try:
+            official, url = official_injuries(season, now, teams, rosters)
+            if url and not official.empty:
+                source = "NBA official report " + url.rsplit("/", 1)[-1]
+        except Exception as err:  # network, WAF, or PDF layout changes
+            log.warning("official injury report unavailable: %s", err)
+    return combine(espn, official), source
+
+
+def fetch_market(client: ESPNClient, upcoming: pd.DataFrame) -> dict[str, dict]:
+    """Sportsbook lines ESPN shows for the slate, keyed by game id.
+
+    Shown next to EQUINE's pick and logged for the season comparison; the
+    model never sees them.
+    """
+    lines: dict[str, dict] = {}
+    for day in sorted(set(upcoming["date"])):
+        try:
+            events = client.scoreboard(pd.Timestamp(day).strftime("%Y%m%d"))
+        except ESPNError as err:
+            log.warning("odds for %s failed: %s", day, err)
+            continue
+        for event in events:
+            odds = parse_odds(event)
+            if odds is not None and odds["p_market"] is not None:
+                lines[odds["game_id"]] = odds
+    log.info("market lines for %d of %d games", len(lines), len(upcoming))
+    return lines
 
 
 # --------------------------------------------------------------------------
@@ -163,6 +211,17 @@ def track_record(
         "brier": float(((scored["p_home"] - y) ** 2).mean()),
         "team_pts_mae": float(pts_err.mean()),
     }
+    if "p_market" in scored:
+        both = scored.dropna(subset=["p_market"])
+        if not both.empty:
+            yb = (both["home_pts"] > both["away_pts"]).astype(float)
+            record["vs_market"] = {
+                "n": int(len(both)),
+                "equine_correct": int(((both["p_home"] > 0.5) == (yb == 1)).sum()),
+                "market_correct": int(((both["p_market"] > 0.5) == (yb == 1)).sum()),
+                "equine_brier": float(((both["p_home"] - yb) ** 2).mean()),
+                "market_brier": float(((both["p_market"] - yb) ** 2).mean()),
+            }
     if not player_preds.empty:
         pp = player_preds.merge(
             player_box[["game_id", "athlete_id", "dnp", *PLAYER_STATS]],
@@ -187,6 +246,7 @@ def track_record(
             "home_pts": r.home_pts,
             "away_pts": r.away_pts,
             "p_home": r.p_home,
+            "p_market": getattr(r, "p_market", None),
             "pred_home_pts": r.pred_home_pts,
             "pred_away_pts": r.pred_away_pts,
             "correct": bool((r.p_home > 0.5) == (r.home_pts > r.away_pts)),
@@ -208,6 +268,7 @@ def daily(
     now: pd.Timestamp | None = None,
     collect: bool = True,
     config: WinnerConfig | None = None,
+    finetune: bool = True,
 ) -> dict[str, Any]:
     now = now or pd.Timestamp.now(tz="UTC")
     season = current_season(now.to_pydatetime())
@@ -221,10 +282,13 @@ def daily(
 
     upcoming = select_upcoming(games, now)
     upcoming_ids = upcoming["game_id"].tolist()
-    injuries = fetch_injuries(client, upcoming_ids)
+    pv = player_values(player_box, games)
+    injuries, injury_source = gather_injuries(
+        client, upcoming_ids, season, now, teams, current_rosters(pv)
+    )
+    market = fetch_market(client, upcoming)
     log.info("%d upcoming games, %d injury entries", len(upcoming_ids), len(injuries))
 
-    pv = player_values(player_box, games)
     state = team_state(games, team_box, pv, upcoming_ids, injuries)
     feats = build_features(games, state, upcoming_ids)
 
@@ -235,10 +299,14 @@ def daily(
     up = feats[feats["game_id"].isin(upcoming_ids)].reset_index(drop=True)
     winner = pd.concat([up, wm.predict(up)], axis=1)
 
-    tfm = TimesFM()
+    # The point head's own deciles give the intervals (better calibrated in
+    # the 2025-26 backtest than the separate quantile head), and that head is
+    # what the daily fine-tune trains.
+    tfm = TimesFM(quantile_head=False)
     tf = team_frame(state)
-    team_pts = forecast_team_points(tfm, tf, upcoming_ids)
     pf = player_frame(pv, tf)
+    fine_tune = daily_finetune(tfm, tf, pf) if finetune else {"used": False}
+    team_pts = forecast_team_points(tfm, tf, upcoming_ids)
     lines = forecast_player_lines(
         tfm, pf, tf, current_rosters(pv), upcoming_ids, injuries
     )
@@ -261,6 +329,8 @@ def daily(
             "predicted_at": stamp,
             "p_home": r.p_home,
             "novelty": r.novelty,
+            "p_market": market.get(r.game_id, {}).get("p_market"),
+            "spread": market.get(r.game_id, {}).get("spread"),
             "pred_home_pts": team_pred(r.game_id, r.home_id, "pts"),
             "pred_away_pts": team_pred(r.game_id, r.away_id, "pts"),
         }
@@ -322,6 +392,7 @@ def daily(
                 "away": r.away_id,
                 "p_home": r.p_home,
                 "novelty": r.novelty,
+                "market": market.get(r.game_id),
                 "elo": {"home": r.home_elo, "away": r.away_elo},
                 "rest": {"home": r.rest_home, "away": r.rest_away},
                 "points": {
@@ -358,6 +429,7 @@ def daily(
             "player_games": int((~player_box["dnp"]).sum()),
             "through": str(finals["date"].max()),
             "source": "ESPN public JSON API",
+            "injuries": injury_source,
         },
         "models": {
             "winner": {
@@ -379,6 +451,7 @@ def daily(
                 "xreg_mode": tfm.xreg_mode,
                 "covariates": list(COVARIATES),
                 "context": tfm.max_context,
+                "fine_tune": fine_tune,
             },
         },
         "teams": teams,
