@@ -3,9 +3,14 @@ name: daily
 # Collect last night's box scores, retrain the EQUINE winner model, forecast
 # the next slate with TimesFM, commit the data, and redeploy the JSON to Pages.
 on:
+  # GitHub delays or drops scheduled runs under load (the first 21:30 run
+  # never fired), most often near the top of the hour. Every run is
+  # idempotent, so each slot has a later backup and minutes are off-peak.
   schedule:
-    - cron: "15 10 * * *" # 10:15 UTC (6:15 EDT / 5:15 EST): every game of the night is final
-    - cron: "30 21 * * *" # 21:30 UTC (5:30 EDT / 4:30 EST): the afternoon injury report
+    - cron: "23 10 * * *" # 10:23 UTC (6:23 EDT / 5:23 EST): every game of the night is final
+    - cron: "41 12 * * *" # backup for the morning run
+    - cron: "37 21 * * *" # 21:37 UTC (5:37 EDT / 4:37 EST): the afternoon injury report
+    - cron: "11 23 * * *" # pre-tip refresh, and backup for the afternoon run
   workflow_dispatch:
     inputs:
       backtest:
@@ -55,7 +60,7 @@ jobs:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           if [ "$REQUESTED" = "true" ] || [ ! -f site/data/backtest.json ] ||
-             { [ "$SCHEDULE" = "15 10 * * *" ] && [ "$(date -u +%u)" = "1" ]; }; then
+             { [ "$SCHEDULE" = "23 10 * * *" ] && [ "$(date -u +%u)" = "1" ]; }; then
             uv run --frozen nbapredicts --cache "$RUNNER_TEMP/espn" backtest
           else
             echo "skipping the backtest today"

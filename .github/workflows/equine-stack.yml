@@ -6,7 +6,7 @@ name: equine-stack
 # if they pass. A failure leaves the previous pin in place and fails the run.
 on:
   schedule:
-    - cron: "40 9 * * *" # 35 minutes before the morning daily run
+    - cron: "47 9 * * *" # before the morning daily run
   workflow_dispatch:
 
 permissions:

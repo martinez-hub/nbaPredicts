@@ -47,6 +47,7 @@ from .forecast import (
 )
 from .injuries import combine, official_injuries
 from .market import fetch_odds
+from .stack import StackedWinner
 from .winner import WinnerConfig, WinnerModel, fit
 
 log = logging.getLogger(__name__)
@@ -325,6 +326,19 @@ def daily(
     WinnerModel.load(root / "models")  # the saved file must round-trip
     up = feats[feats["game_id"].isin(upcoming_ids)].reset_index(drop=True)
     winner = pd.concat([up, wm.predict(up)], axis=1)
+    # Market-anchored EQUINE (see stack.py): used wherever a line is posted;
+    # the features-only model above stays the fallback and supplies novelty.
+    odds = store.load("odds")
+    stack_train = train.merge(odds[["game_id", "p_close"]], on="game_id", how="inner")
+    stacked = StackedWinner.fit(stack_train)
+    p_line = up["game_id"].map(lambda g: market.get(g, {}).get("p_market"))
+    has_line = p_line.notna().to_numpy()
+    winner["p_model"] = winner["p_home"]
+    winner["uses_line"] = has_line
+    if has_line.any():
+        p_stack = stacked.predict(up[has_line], p_line[has_line].astype(float))
+        winner.loc[has_line, "p_home"] = p_stack["p_home"].to_numpy()
+    log.info("winner: %d of %d games use the betting line", has_line.sum(), len(up))
 
     # The point head's own deciles give the intervals (better calibrated in
     # the 2025-26 backtest than the separate quantile head), and that head is
@@ -353,8 +367,11 @@ def daily(
             "away_id": r.away_id,
             "predicted_at": stamp,
             "p_home": r.p_home,
+            "p_model": r.p_model,
+            "uses_line": bool(r.uses_line),
             "novelty": r.novelty,
             "p_market": market.get(r.game_id, {}).get("p_market"),
+            "p_open": market.get(r.game_id, {}).get("p_open"),
             "spread": market.get(r.game_id, {}).get("spread"),
             "pred_home_pts": team_pred(r.game_id, r.home_id, "pts"),
             "pred_away_pts": team_pred(r.game_id, r.away_id, "pts"),
@@ -416,6 +433,8 @@ def daily(
                 "home": r.home_id,
                 "away": r.away_id,
                 "p_home": r.p_home,
+                "p_model": r.p_model,
+                "uses_line": bool(r.uses_line),
                 "novelty": r.novelty,
                 "market": market.get(r.game_id),
                 "elo": {"home": r.home_elo, "away": r.away_elo},
@@ -467,6 +486,12 @@ def daily(
                 "embedding": embedding_desc,
                 "features": FEATURES,
                 "trained_on": int(len(train)),
+                "stacked": {
+                    "inputs": ["betting line log-odds", "feature model log-odds"],
+                    "embedding": "MLP 2→8→4",
+                    "trained_on": int(len(stack_train)),
+                    "games_using_line": int(has_line.sum()),
+                },
                 "epochs": wm.epochs_trained,
             },
             "forecast": {

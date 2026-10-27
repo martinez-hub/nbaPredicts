@@ -80,3 +80,19 @@ def test_prediction_log_ignores_an_empty_slate(tmp_path):
     games = pd.DataFrame({"game_id": ["1"], "status": ["final"], "season": [2027]})
     out = log_predictions(store, "predictions", pd.DataFrame(), ["game_id"], games)
     assert out.empty
+
+
+def test_stacked_model_follows_an_informative_line():
+    from nbapredicts.backtest import elo_probability
+    from nbapredicts.stack import StackedWinner
+    from tests.conftest import make_league
+
+    feats = league_features(make_league(n_teams=10, n_days=150, seed=2))
+    # A sharp "market": the Elo probability, which the features only partly see.
+    feats["p_close"] = elo_probability(feats)
+    train = feats[feats["season"] == 2024]
+    test = feats[feats["season"] == 2025]
+    stacked = StackedWinner.fit(train)
+    p = stacked.predict(test, test["p_close"])["p_home"].to_numpy()
+    assert ((p > 0) & (p < 1)).all()
+    assert np.corrcoef(p, test["p_close"])[0, 1] > 0.8

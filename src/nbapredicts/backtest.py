@@ -25,6 +25,7 @@ from .forecast import (
     backtest_player_lines,
     backtest_team_points,
 )
+from .stack import StackedWinner
 from .winner import WinnerConfig, fit
 
 log = logging.getLogger(__name__)
@@ -75,11 +76,18 @@ def elo_probability(df: pd.DataFrame) -> np.ndarray:
 
 
 def backtest_winner(
-    feats: pd.DataFrame, test_seasons: list[int], config: WinnerConfig | None = None
+    feats: pd.DataFrame,
+    test_seasons: list[int],
+    config: WinnerConfig | None = None,
+    odds: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
+    """Walk-forward winner metrics; with ``odds``, also the closing line and the
+    market-anchored EQUINE, every model scored on the same games."""
     finals = feats.dropna(subset=["home_win"])
     finals = finals[finals["season"] > FIRST_SEASON]  # first season warms up state
-    seasons, pooled = [], []
+    if odds is not None:
+        finals = finals.merge(odds[["game_id", "p_close"]], on="game_id", how="inner")
+    seasons, pooled, pooled_stack = [], [], []
     for season in test_seasons:
         train = finals[finals["season"] < season]
         test = finals[finals["season"] == season]
@@ -103,6 +111,15 @@ def backtest_winner(
             "elo": elo_probability(test),
             "home_team": np.full(len(test), home_rate),
         }
+        if odds is not None:
+            stacked = StackedWinner.fit(train)
+            p_stack = stacked.predict(test, test["p_close"])["p_home"].to_numpy()
+            models = {
+                "equine_market": p_stack,
+                "market": test["p_close"].to_numpy(),
+                **models,
+            }
+            pooled_stack.append(pd.DataFrame({"y": y, "p": p_stack}))
         seasons.append(
             {
                 "season": int(season),
@@ -123,11 +140,17 @@ def backtest_winner(
         }
         for t, g in allp.groupby("tercile")
     ]
-    return {
+    out = {
         "seasons": seasons,
         "reliability": reliability(allp["y"].to_numpy(), allp["p"].to_numpy()),
         "by_novelty": by_novelty,
     }
+    if pooled_stack:
+        st = pd.concat(pooled_stack, ignore_index=True)
+        out["reliability_market_model"] = reliability(
+            st["y"].to_numpy(), st["p"].to_numpy()
+        )
+    return out
 
 
 def regression_metrics(df: pd.DataFrame) -> dict[str, float]:

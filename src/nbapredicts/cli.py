@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> None:
         pv = player_values(player_box, games)
         state = team_state(games, team_box, pv, [])
         feats = build_features(games, state, [])
-        winner = backtest_winner(feats, seasons)
+        winner = backtest_winner(feats, seasons, odds=store.load("odds"))
         if args.winner_only:
             previous = json.loads((root / "site/data/backtest.json").read_text())
             kept = {
