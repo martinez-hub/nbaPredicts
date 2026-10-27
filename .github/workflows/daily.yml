@@ -1,0 +1,89 @@
+name: daily
+
+# Collect last night's box scores, retrain the EQUINE winner model, forecast
+# the next slate with TimesFM, commit the data, and redeploy the JSON to Pages.
+on:
+  schedule:
+    - cron: "15 10 * * *" # 10:15 UTC (6:15 ET): every game of the night is final
+    - cron: "30 21 * * *" # 21:30 UTC (5:30 ET): refresh with the afternoon injury report
+  workflow_dispatch:
+    inputs:
+      backtest:
+        description: "Also rerun the walk-forward backtest"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TQDM_DISABLE: "1" # EQUINE's per-epoch progress bars
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --frozen --no-dev
+
+      - name: Cache the TimesFM checkpoint
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: hf-timesfm-2.5-200m-pytorch
+
+      - name: Run the daily pipeline
+        run: uv run nbapredicts --cache "$RUNNER_TEMP/espn" daily
+
+      # The backtest takes several minutes: Monday mornings, on request, or
+      # whenever its output is missing.
+      - name: Backtest
+        env:
+          REQUESTED: ${{ inputs.backtest }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$REQUESTED" = "true" ] || [ ! -f site/data/backtest.json ] ||
+             { [ "$SCHEDULE" = "15 10 * * *" ] && [ "$(date -u +%u)" = "1" ]; }; then
+            uv run nbapredicts --cache "$RUNNER_TEMP/espn" backtest
+          else
+            echo "skipping the backtest today"
+          fi
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data site/data
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "data: $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

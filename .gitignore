@@ -1,0 +1,12 @@
+.venv
+.venv.nosync/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+# Raw ESPN responses: a resumable cache, rebuilt on demand, not source.
+cache.nosync/
+logs/
+# Retrained every run from data/; not worth a binary blob per day in history.
+models/

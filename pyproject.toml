@@ -1,0 +1,55 @@
+[project]
+name = "nbapredicts"
+version = "0.1.0"
+description = "Daily NBA game-winner predictions (EQUINE) and score/stat forecasts (TimesFM)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Tip of the open-PR stack #236 -> #263 on mit-ll-responsible-ai/equine
+    # (branch maint/python-311-syntax). Pinned by SHA: the stack's branches
+    # are force-pushed as it is rebased. Bump with scripts/equine_stack_tip.py.
+    "equine @ git+https://github.com/mit-ll-responsible-ai/equine.git@24c7cae9d8ca427c0e5124d4422629d318ca127e",
+    "timesfm[torch]==3.0.2",
+    "torch>=2.14.1",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "requests>=2.32",
+    "scikit-learn>=1.5",
+    "jax>=0.4.30",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+nbapredicts = "nbapredicts.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nbapredicts"]
+
+# CPU-only torch on Linux (GitHub Actions); the default PyPI wheel there pulls
+# several GB of CUDA libraries the job never uses.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
