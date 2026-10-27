@@ -48,6 +48,8 @@ _HEADERS = {
 
 def normalize_name(name: str) -> str:
     """'Butler III, Jimmy' and 'Jimmy Butler III' both become 'jimmy butler'."""
+    if not isinstance(name, str):
+        return ""
     if "," in name:
         last, first = name.split(",", 1)
         name = f"{first} {last}"
@@ -73,23 +75,64 @@ def latest_report_url(season: int, now: pd.Timestamp) -> str | None:
     return best[1] if best else None
 
 
+def _team_keys(team_names: list[str]) -> dict[str, str]:
+    """Strings that identify a team in the report, mapped to its full name.
+
+    The full name, the name without its last word ("Portland Trail") and the
+    nickname ("Blazers"), so a name the PDF wraps across two lines is still
+    recognized from either half. Strings two teams share are dropped.
+    """
+    seen: dict[str, set[str]] = {}
+    for name in team_names:
+        words = name.split()
+        for key in {name, " ".join(words[:-1]), words[-1]}:
+            if key:
+                seen.setdefault(key, set()).add(name)
+    # Keys under four letters ("LA") occur inside other words.
+    return {k: next(iter(v)) for k, v in seen.items() if len(v) == 1 and len(k) >= 4}
+
+
+def _squash(text: str) -> str:
+    return "".join(text.split()).lower()
+
+
+def _last_team(head: str, keys: dict[str, str]) -> str | None:
+    """The team whose key ends last in ``head``; the longer key wins a tie
+    ("hornets" over "nets")."""
+    best: tuple[int, int, str] | None = None
+    for key, team in keys.items():
+        at = head.rfind(key)
+        if at >= 0:
+            cand = (at + len(key), len(key), team)
+            if best is None or cand > best:
+                best = cand
+    return best[2] if best else None
+
+
 def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
     """Rows of (team, player, status) from one report PDF."""
     from pypdf import PdfReader
 
-    names = sorted(team_names, key=len, reverse=True)
+    # Compared with spaces removed: the PDF prints "Portland  TrailBlazers".
+    keys = {_squash(k): v for k, v in _team_keys(team_names).items()}
     rows: list[dict[str, Any]] = []
     team = None
     for page in PdfReader(io.BytesIO(pdf)).pages:
         lines = page.extract_text(extraction_mode="layout").splitlines()
         # Layout extraction lists a page's rows bottom-up.
         for line in reversed(lines):
-            flat = " ".join(line.split())
-            for candidate in names:
-                if candidate in flat:
-                    team = candidate
-                    break
             match = _ROW.search(line)
+            # The team column ends at the last run of 2+ spaces before the
+            # player's "Last, First" comma; looking only there keeps a
+            # reason's text from switching the team.
+            if match:
+                comma = line.index(",", match.start(1))
+                head = line[: max(line.rfind("  ", 0, comma), 0)]
+            else:
+                head = line
+            found = _last_team(_squash(head), keys)
+            if found:
+                team = found
             if team is None or match is None:
                 continue
             player = " ".join(match.group(1).split()[-4:])  # drop leading columns
@@ -122,6 +165,12 @@ def official_injuries(
         on=["team_id", "key"],
         how="left",
     )
+    # Fall back to a name that is unique league-wide (a late trade, or a team
+    # column the PDF mangled).
+    unique = known.drop_duplicates("key", keep=False).set_index("key")
+    gap = merged["athlete_id"].isna() & merged["key"].isin(unique.index)
+    for col in ("athlete_id", "name", "team_id"):
+        merged.loc[gap, col] = merged.loc[gap, "key"].map(unique[col])
     matched = merged.dropna(subset=["athlete_id"])
     log.info(
         "official injury report %s: %d rows, %d matched to rosters",

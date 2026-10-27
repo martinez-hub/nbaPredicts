@@ -193,3 +193,23 @@ def parse_odds(event: dict[str, Any]) -> dict[str, Any] | None:
         "ml_away": away,
         "p_market": p_home,
     }
+
+
+def fetch_rosters(client: ESPNClient, team_ids: list[str]) -> list[dict[str, Any]]:
+    """Each team's current roster: (team_id, athlete_id, name) rows."""
+    rows = []
+    for tid in team_ids:
+        try:
+            athletes = client.get(f"teams/{tid}/roster").get("athletes", [])
+        except ESPNError as err:
+            log.warning("roster for team %s failed: %s", tid, err)
+            continue
+        rows += [
+            {
+                "team_id": str(tid),
+                "athlete_id": str(a["id"]),
+                "name": a.get("displayName"),
+            }
+            for a in athletes
+        ]
+    return rows

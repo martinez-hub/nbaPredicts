@@ -239,17 +239,27 @@ def _top_sum(values: pd.Series, keys: list[pd.Series]) -> pd.Series:
     return frame.groupby(cols, sort=False).head(ROTATION).groupby(cols)["v"].sum()
 
 
-def current_rosters(pv: pd.DataFrame, recent_games: int = 10) -> pd.DataFrame:
-    """Players whose latest appearance was in one of their team's last games.
+def current_rosters(
+    pv: pd.DataFrame, recent_games: int = 10, espn: pd.DataFrame | None = None
+) -> pd.DataFrame:
+    """Each team's current players with their latest value.
 
-    Anchored on each team's own recent games rather than the calendar, so the
-    rosters stay populated through the offseason.
+    With ``espn`` (ESPN's current team rosters), membership comes from it, so
+    offseason moves count before the player has played for his new team; a
+    player with no history gets the replacement value. Without it, a player
+    belongs to the team of his latest appearance if that was one of the
+    team's last ``recent_games`` games.
     """
+    latest = pv.sort_values("start").groupby("athlete_id").tail(1)
+    if espn is not None and not espn.empty:
+        value = latest.set_index("athlete_id")["post_value"]
+        roster = espn[["athlete_id", "name", "team_id"]].copy()
+        roster["post_value"] = roster["athlete_id"].map(value).fillna(REPLACEMENT_GMSC)
+        return roster
     team_games_ = pv[["team_id", "game_id", "start"]].drop_duplicates(
         ["team_id", "game_id"]
     )
     recent = team_games_.sort_values("start").groupby("team_id").tail(recent_games)
-    latest = pv.sort_values("start").groupby("athlete_id").tail(1)
     roster = latest.merge(recent[["team_id", "game_id"]], on=["team_id", "game_id"])
     return roster[["athlete_id", "name", "team_id", "post_value"]]
 
@@ -278,6 +288,7 @@ def availability(
     pv: pd.DataFrame,
     upcoming: pd.DataFrame,
     injuries: pd.DataFrame | None,
+    rosters: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Top-``ROTATION`` summed player value for each (game, team).
 
@@ -295,7 +306,7 @@ def availability(
     if upcoming.empty:
         return past
 
-    roster = current_rosters(pv)
+    roster = rosters.copy() if rosters is not None else current_rosters(pv)
     roster["p_play"] = 1.0
     if injuries is not None and not injuries.empty:
         if "p_play" in injuries:
@@ -326,6 +337,7 @@ def team_state(
     pv: pd.DataFrame,
     upcoming_ids: list[str],
     injuries: pd.DataFrame | None = None,
+    rosters: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (game, team), final and upcoming, with pre-game team state.
 
@@ -359,7 +371,7 @@ def team_state(
     slots["date"] = pd.to_datetime(slots["date"])
     state = _rolling_team_state(slots)
 
-    avail = availability(pv, upcoming, injuries)
+    avail = availability(pv, upcoming, injuries, rosters)
     state = state.merge(avail, on=["game_id", "team_id"], how="left")
     state = state.sort_values(["start", "game_id"]).reset_index(drop=True)
     state["avail_typical"] = state.groupby("team_id")["avail"].transform(

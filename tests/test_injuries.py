@@ -24,6 +24,11 @@ def test_parses_the_official_report():
     assert (duren["team"], duren["status"]) == ("Detroit Pistons", "Out")
     # A row below a team's first line still belongs to that team.
     assert rows[rows["player"] == "Saraf, Ben"].iloc[0]["team"] == "Brooklyn Nets"
+    # The PDF prints "Portland  TrailBlazers"; its six players stay Portland's.
+    teams = rows.groupby("team")["player"].apply(set)
+    assert {"Henderson, Scoot", "Sharpe, Shaedon"} <= teams["Portland Trail Blazers"]
+    assert teams["San Antonio Spurs"] == {"Quaintance, Jayden"}
+    assert "LA Clippers" not in teams  # "LA" must not match inside other words
 
 
 def test_names_match_across_sources():

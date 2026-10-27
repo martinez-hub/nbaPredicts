@@ -26,7 +26,7 @@ from .collect import (
     fetch_injuries,
     update,
 )
-from .espn import ESPNClient, ESPNError, parse_odds
+from .espn import ESPNClient, ESPNError, fetch_rosters, parse_odds
 from .features import (
     FEATURES,
     build_features,
@@ -283,13 +283,17 @@ def daily(
     upcoming = select_upcoming(games, now)
     upcoming_ids = upcoming["game_id"].tolist()
     pv = player_values(player_box, games)
+    # ESPN's current rosters decide who is on which team (offseason moves
+    # count before a player suits up for his new team).
+    espn_rosters = pd.DataFrame(fetch_rosters(client, list(teams)))
+    rosters = current_rosters(pv, espn=espn_rosters)
     injuries, injury_source = gather_injuries(
-        client, upcoming_ids, season, now, teams, current_rosters(pv)
+        client, upcoming_ids, season, now, teams, rosters
     )
     market = fetch_market(client, upcoming)
     log.info("%d upcoming games, %d injury entries", len(upcoming_ids), len(injuries))
 
-    state = team_state(games, team_box, pv, upcoming_ids, injuries)
+    state = team_state(games, team_box, pv, upcoming_ids, injuries, rosters)
     feats = build_features(games, state, upcoming_ids)
 
     train = feats[(feats["status"] == "final") & (feats["season"] > FIRST_SEASON)]
@@ -307,9 +311,7 @@ def daily(
     pf = player_frame(pv, tf)
     fine_tune = daily_finetune(tfm, tf, pf) if finetune else {"used": False}
     team_pts = forecast_team_points(tfm, tf, upcoming_ids)
-    lines = forecast_player_lines(
-        tfm, pf, tf, current_rosters(pv), upcoming_ids, injuries
-    )
+    lines = forecast_player_lines(tfm, pf, tf, rosters, upcoming_ids, injuries)
 
     stamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     pts = team_pts.set_index(["game_id", "team_id"]) if not team_pts.empty else None
