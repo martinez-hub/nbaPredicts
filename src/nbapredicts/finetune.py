@@ -27,6 +27,8 @@ import torch
 log = logging.getLogger(__name__)
 
 K = 4  # steps ahead supervised per position; forecasts here use 1-3
+KEEP_MEAN_RATIO = 0.997  # fine-tuned head kept only if mean MAE ratio <= this
+KEEP_MAX_RATIO = 1.01  # ...and no single stat's MAE ratio above this
 QUANTILES = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
 _TOL = 1e-6
 
@@ -326,8 +328,9 @@ def daily_finetune(
 
     The most recent ``holdout_games`` finals are held out: the head trains on
     everything before them, and is kept only if its one-step forecasts of
-    those games beat the untouched model's (mean of per-stat MAE ratios
-    below 1). Otherwise the original head is restored.
+    those games clearly beat the untouched model's (mean per-stat MAE ratio
+    at most ``KEEP_MEAN_RATIO``, none above ``KEEP_MAX_RATIO``). Otherwise the
+    original head is restored.
     """
     import pandas as pd
 
@@ -346,14 +349,18 @@ def daily_finetune(
     info = finetune_point_head(module, series, ends, limits, config)
     tuned = _score(tfm, jobs, groups, actual)
 
-    ratio = float(np.mean([tuned[k] / base[k] for k in base]))
-    used = ratio < 1.0
+    ratios = {k: tuned[k] / base[k] for k in base}
+    ratio = float(np.mean(list(ratios.values())))
+    # A tie on 150 games is noise: require a clear average gain, and no stat
+    # made noticeably worse.
+    used = ratio <= KEEP_MEAN_RATIO and max(ratios.values()) <= KEEP_MAX_RATIO
     if not used:
         module.output_projection_point.load_state_dict(original)
     log.info("daily fine-tune: ratio %.4f, %s", ratio, "kept" if used else "reverted")
     return {
         "used": used,
         "mae_ratio": ratio,
+        "mae_ratios": ratios,
         "holdout_games": holdout_games,
         "holdout_from": cutoff.strftime("%Y-%m-%d"),
         "mae_base": base,

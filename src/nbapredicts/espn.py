@@ -87,7 +87,9 @@ class ESPNClient:
             self._last_request = time.monotonic()
 
     def get(self, path: str, **params: Any) -> dict[str, Any]:
-        url = f"{BASE}/{path}"
+        return self.get_url(f"{BASE}/{path}", **params)
+
+    def get_url(self, url: str, **params: Any) -> dict[str, Any]:
         last_error: Exception | None = None
         for attempt in range(self.max_retries):
             self._throttle()

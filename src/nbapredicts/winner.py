@@ -104,7 +104,11 @@ class WinnerModel:
         )
 
 
-def fit(train: pd.DataFrame, config: WinnerConfig | None = None) -> WinnerModel:
+def fit(
+    train: pd.DataFrame,
+    config: WinnerConfig | None = None,
+    features: list[str] | None = None,
+) -> WinnerModel:
     """Fit on final games in ``train`` (chronological; the latest slice calibrates)."""
     config = config or WinnerConfig()
     torch.manual_seed(config.seed)
@@ -114,13 +118,14 @@ def fit(train: pd.DataFrame, config: WinnerConfig | None = None) -> WinnerModel:
     n_calib = max(1, int(len(train) * config.calib_frac))
     fit_df, calib_df = train.iloc[:-n_calib], train.iloc[-n_calib:]
 
-    x_all = fit_df[FEATURES].to_numpy(dtype=np.float64)
+    features = list(features or FEATURES)
+    x_all = fit_df[features].to_numpy(dtype=np.float64)
     mean = np.nanmean(x_all, axis=0)
     std = np.nanstd(x_all, axis=0)
     std[std == 0] = 1.0
 
     embedding = eq.MLP(
-        in_features=len(FEATURES),
+        in_features=len(features),
         hidden_sizes=list(config.hidden),
         out_features=config.emb_dim,
     )
@@ -129,10 +134,10 @@ def fit(train: pd.DataFrame, config: WinnerConfig | None = None) -> WinnerModel:
         emb_out_dim=config.emb_dim,
         num_classes=2,
         num_random_features=config.random_features,
-        feature_names=list(FEATURES),
+        feature_names=features,
         label_names=LABELS,
     )
-    wm = WinnerModel(model, mean, std, np.array([0.0]), list(FEATURES))
+    wm = WinnerModel(model, mean, std, np.array([0.0]), features)
 
     def dataset(df: pd.DataFrame) -> TensorDataset:
         y = torch.tensor(df["home_win"].to_numpy(), dtype=torch.long)
