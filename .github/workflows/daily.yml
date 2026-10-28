@@ -75,9 +75,15 @@ jobs:
             echo "no changes"
           else
             git commit -m "data: $(date -u +%Y-%m-%dT%H:%MZ)"
-            # A code push may have landed while this run was working.
-            git pull --rebase origin main
-            git push origin HEAD:main
+            # A push may have landed while this run was working. Every run
+            # regenerates its data, so if main now conflicts with it, skip
+            # this commit rather than fail; the next run catches up.
+            if git pull --rebase origin main; then
+              git push origin HEAD:main
+            else
+              git rebase --abort
+              echo "::warning::main changed the same data files during this run; data commit skipped"
+            fi
           fi
 
       - uses: actions/configure-pages@v6
