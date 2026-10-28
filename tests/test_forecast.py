@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
-from nbapredicts.forecast import COVARIATES, Job, TimesFM
+from nbapredicts.forecast import (
+    COVARIATES,
+    Job,
+    TimesFM,
+    margin_per_logit,
+    split_total,
+)
 
 
 class FakeModel:
@@ -74,3 +81,40 @@ def test_short_contexts_skip_xreg():
     out = tfm.run([job(5, 1, n=20), job(7, 1)])
     assert [p[0] for p, _ in out] == [5, 7]
     assert tfm.model.plain == [1] and tfm.model.batches == [[1]]
+
+
+def test_split_total_keeps_the_total_and_follows_the_pick():
+    team_pts = pd.DataFrame(
+        {
+            "game_id": ["g1", "g1", "g2"],
+            "team_id": ["h", "a", "x"],  # g2's opponent has no forecast
+            "pts": [111.0, 112.0, 100.0],
+            "pts_lo": [96.0, 97.0, 90.0],
+            "pts_hi": [126.0, 127.0, 110.0],
+        }
+    )
+    picks = pd.DataFrame(
+        {
+            "game_id": ["g1", "g2"],
+            "home_id": ["h", "x"],
+            "away_id": ["a", "y"],
+            "p_home": [0.7, 0.9],
+        }
+    )
+    out = split_total(team_pts, picks, (8.0, 0.0)).set_index("team_id")
+    margin = 8.0 * np.log(0.7 / 0.3)
+    assert out.loc["h", "pts"] + out.loc["a", "pts"] == 223.0
+    assert np.isclose(out.loc["h", "pts"] - out.loc["a", "pts"], margin)
+    # Intervals move with the forecast; TimesFM's own split is kept.
+    assert np.isclose(out.loc["h", "pts_hi"] - out.loc["h", "pts"], 15.0)
+    assert out.loc["a", "pts_tfm"] == 112.0
+    assert out.loc["x", "pts"] == 100.0
+
+
+def test_margin_per_logit_recovers_the_spread_line():
+    p = np.array([0.2, 0.4, 0.5, 0.65, 0.85])
+    odds = pd.DataFrame(
+        {"p_close": p, "spread_close": -7.0 * np.log(p / (1 - p)) - 2.0}
+    )
+    slope, intercept = margin_per_logit(odds)
+    assert np.isclose(slope, 7.0) and np.isclose(intercept, 2.0)
