@@ -173,6 +173,17 @@ def test_pregame_availability_uses_the_report_and_not_the_game(league):
     q = out.assign(status="Questionable")
     assert with_out < _pregame(games, player_box, q).loc[(last["game_id"], team)] < base
 
+    # A report published after tip-off (the 6:30 PM report on an afternoon
+    # game day) is not known before the game.
+    def published(hours: float) -> str:
+        t = pd.Timestamp(last["start"]) + pd.Timedelta(hours=hours)
+        return t.tz_convert("America/New_York").strftime("%Y-%m-%d %H:%M")
+
+    early = out.assign(published=published(-2))
+    late = out.assign(published=published(1))
+    assert _pregame(games, player_box, early).loc[(last["game_id"], team)] == with_out
+    assert _pregame(games, player_box, late).loc[(last["game_id"], team)] == base
+
     # Rewriting the game's own box score does not move its pre-game value.
     p2 = player_box.copy()
     p2.loc[p2["game_id"] == last["game_id"], "pts"] = 99.0

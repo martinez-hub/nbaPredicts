@@ -13,6 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .collect import EASTERN
 from .espn import POSTSEASON
 
 SHORT, LONG = 8, 30  # EWM spans, in games
@@ -522,11 +523,23 @@ def pregame_rosters(
     game_day = rep["game_date"] if "game_date" in rep else rep["day"]
     rep["date"] = pd.to_datetime(game_day.fillna(rep["day"])).dt.date
     rep["p_play"] = rep["status"].str.lower().map(P_PLAY).fillna(1.0)
+    roster["key"] = roster["name"].map(normalize_name)
+    roster["date"] = pd.to_datetime(roster["date"]).dt.date
+    if "published" in rep:
+        # The history keeps each day's report from 6:30 PM ET, after an
+        # afternoon tip-off (about one game in ten): a game only sees reports
+        # published before it starts.
+        starts = roster[["team_id", "date", "start"]].drop_duplicates(
+            ["team_id", "date"]
+        )
+        rep = rep.merge(starts, on=["team_id", "date"], how="inner")
+        published = pd.to_datetime(rep["published"]).dt.tz_localize(
+            EASTERN, ambiguous="NaT", nonexistent="shift_forward"
+        )
+        rep = rep[published.dt.tz_convert("UTC") < rep["start"]]
     order = rep["published"] if "published" in rep else rep["day"]
     rep = rep.assign(_order=order).sort_values("_order")
     rep = rep.drop_duplicates(["team_id", "date", "key"], keep="last")
-    roster["key"] = roster["name"].map(normalize_name)
-    roster["date"] = pd.to_datetime(roster["date"]).dt.date
     roster = roster.merge(
         rep[["team_id", "date", "key", "p_play"]],
         on=["team_id", "date", "key"],

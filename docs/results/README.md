@@ -88,13 +88,13 @@ the defaults.
 
 | Season | EQUINE with the line | Closing line | EQUINE, no line | Logistic | Elo |
 |---|---|---|---|---|---|
-| 2023-24 | 68.7% / 0.2000 | 68.9% / 0.1993 | 66.0% / 0.2095 | 65.8% / 0.2086 | 64.4% / 0.2182 |
-| 2024-25 | 69.6% / 0.2013 | 69.3% / 0.2012 | 67.8% / 0.2065 | 68.1% / 0.2065 | 64.7% / 0.2185 |
-| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.3% / 0.2052 | 68.0% / 0.2041 | 67.4% / 0.2110 |
+| 2023-24 | 68.7% / 0.1999 | 68.9% / 0.1993 | 66.3% / 0.2096 | 65.7% / 0.2089 | 64.4% / 0.2182 |
+| 2024-25 | 69.6% / 0.2013 | 69.3% / 0.2012 | 67.6% / 0.2067 | 68.0% / 0.2066 | 64.7% / 0.2185 |
+| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.7% / 0.2052 | 68.2% / 0.2042 | 67.4% / 0.2110 |
 
 (accuracy / Brier). By EQUINE's GP-variance tercile the no-line model picked
-62.0%, 67.6% and 72.5% correctly (most ordinary to rarest), calibration
-error 0.026, 0.036, 0.025. With the current settings, high variance marks
+62.9%, 66.9% and 72.8% correctly (most ordinary to rarest), calibration
+error 0.033, 0.030, 0.028. With the current settings, high variance marks
 rare, mostly lopsided matchups, which are easier to call; with EquineGP's
 defaults (LayerNorm, mean-field 25) the order had been reversed (75/65/60%).
 
@@ -146,6 +146,27 @@ last N seasons, minus training on everything since 2013-14:
 No window helps; the last three seasons alone are worse in two of three
 (intervals exclude zero). The feature model alone is mixed (last five seasons:
 -0.0005, -0.0016, +0.0011). Training stays on every season.
+
+## Injury reports published after tip-off
+
+The history keeps each day's report from 6:30 PM ET, which comes after the
+tip-off of about one game in ten (9.7% of 9,405 games on report days:
+afternoon weekend and holiday games). Until 2026-10-28 those games' pre-game
+availability read that report anyway; now a game only sees report rows
+published before it starts (`features.pregame_rosters`), which on such days
+usually leaves the previous day's report. Numbers in the sections above were
+computed before this change; the final backtest above was rerun with it
+(EQUINE with the line moved by at most 0.0001 Brier).
+
+## 2026-27 games from before the page went live
+
+The season began on Oct 20; the daily job's first slate was Oct 27.
+`nbapredicts backfill` predicted the 52 games in between after the fact, each
+day with both EQUINE models refit on the games before it, that day's injury
+report as of 6:30 PM ET (only rows published before each tip-off), the
+closing line, and zero-shot TimesFM. They are flagged `backfilled` in the
+prediction log and marked on the page. Through Oct 27: 37 of 52 right
+(the closing line also 37), plus 3 of 4 published before tip-off.
 
 ## Where this leaves "beating the market"
 

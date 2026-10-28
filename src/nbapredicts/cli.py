@@ -31,6 +31,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--no-collect", action="store_true")
     p.add_argument("--no-finetune", action="store_true", help="use TimesFM as released")
 
+    sub.add_parser(
+        "backfill",
+        help="after-the-fact predictions for finished games the daily job missed",
+    )
+
     p = sub.add_parser("backtest", help="walk-forward evaluation of both models")
     p.add_argument("--seasons", type=int, nargs="+", default=None)
     p.add_argument("--player-sample", type=int, default=3000)
@@ -68,6 +73,16 @@ def main(argv: list[str] | None = None) -> None:
             finetune=not args.no_finetune,
         )
         print(json.dumps(result, default=str))
+
+    elif args.command == "backfill":
+        import pandas as pd
+
+        from .backfill import backfill
+
+        now = pd.Timestamp.now(tz="UTC")
+        print(
+            json.dumps(backfill(root, store, current_season(now.to_pydatetime()), now))
+        )
 
     elif args.command == "backtest":
         import pandas as pd
