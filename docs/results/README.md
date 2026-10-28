@@ -84,6 +84,20 @@ defaults (LayerNorm on GP features, mean-field factor 25) gave Brier 0.2139;
 without the LayerNorm and with pi/8, 0.2070 (logistic 0.2061). Those are now
 the defaults.
 
+## Final backtest (published, 2023-24..2025-26)
+
+| Season | EQUINE with the line | Closing line | EQUINE, no line | Logistic | Elo |
+|---|---|---|---|---|---|
+| 2023-24 | 68.7% / 0.2000 | 68.9% / 0.1993 | 66.0% / 0.2095 | 65.8% / 0.2086 | 64.4% / 0.2182 |
+| 2024-25 | 69.6% / 0.2013 | 69.3% / 0.2012 | 67.8% / 0.2065 | 68.1% / 0.2065 | 64.7% / 0.2185 |
+| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.3% / 0.2052 | 68.0% / 0.2041 | 67.4% / 0.2110 |
+
+(accuracy / Brier). By EQUINE's GP-variance tercile the no-line model picked
+62.0%, 67.6% and 72.5% correctly (most ordinary to rarest), calibration
+error 0.026, 0.036, 0.025. With the current settings, high variance marks
+rare, mostly lopsided matchups, which are easier to call; with EquineGP's
+defaults (LayerNorm, mean-field 25) the order had been reversed (75/65/60%).
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
