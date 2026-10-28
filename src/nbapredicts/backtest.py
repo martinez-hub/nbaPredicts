@@ -80,6 +80,7 @@ def backtest_winner(
     test_seasons: list[int],
     config: WinnerConfig | None = None,
     odds: pd.DataFrame | None = None,
+    features: list[str] | None = None,
 ) -> dict[str, Any]:
     """Walk-forward winner metrics; with ``odds``, also the closing line and the
     market-anchored EQUINE, every model scored on the same games."""
@@ -94,12 +95,13 @@ def backtest_winner(
         if test.empty:
             continue
         log.info("winner backtest %d: train %d, test %d", season, len(train), len(test))
-        wm = fit(train, config)
+        cols = list(features or FEATURES)
+        wm = fit(train, config, features=cols)
         pred = wm.predict(test)
         y = test["home_win"].to_numpy()
 
-        x_train = np.nan_to_num((train[FEATURES].to_numpy() - wm.mean) / wm.std)
-        x_test = np.nan_to_num((test[FEATURES].to_numpy() - wm.mean) / wm.std)
+        x_train = np.nan_to_num((train[cols].to_numpy() - wm.mean) / wm.std)
+        x_test = np.nan_to_num((test[cols].to_numpy() - wm.mean) / wm.std)
         logit = LogisticRegression(C=1.0, max_iter=2000).fit(
             x_train, train["home_win"].to_numpy()
         )
@@ -112,7 +114,7 @@ def backtest_winner(
             "home_team": np.full(len(test), home_rate),
         }
         if odds is not None:
-            stacked = StackedWinner.fit(train)
+            stacked = StackedWinner.fit(train, features=cols)
             p_stack = stacked.predict(test, test["p_close"])["p_home"].to_numpy()
             models = {
                 "equine_market": p_stack,
