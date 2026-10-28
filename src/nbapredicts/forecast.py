@@ -12,6 +12,7 @@ weights are licensed for non-production use only, which a public page is not.
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -196,6 +197,52 @@ def forecast_team_points(
                 }
             )
     return pd.DataFrame(rows)
+
+
+def margin_per_logit(odds: pd.DataFrame) -> tuple[float, float]:
+    """(slope, intercept) of the home margin on the line's log-odds.
+
+    Fit on every game with a closing line and spread: how the betting market
+    turns a win probability into points.
+    """
+    o = odds.dropna(subset=["p_close", "spread_close"])
+    p = np.clip(o["p_close"].to_numpy(float), 1e-4, 1 - 1e-4)
+    slope, intercept = np.polyfit(
+        np.log(p / (1 - p)), -o["spread_close"].to_numpy(float), 1
+    )
+    return float(slope), float(intercept)
+
+
+def split_total(
+    team_pts: pd.DataFrame, picks: pd.DataFrame, line: tuple[float, float]
+) -> pd.DataFrame:
+    """Keep TimesFM's total for each game and split it by the winner pick.
+
+    The margin is the pick's win probability read as points (``line`` from
+    ``margin_per_logit``), so the projected score always favors the picked
+    side. Each team's interval moves with its forecast; TimesFM's own split
+    is kept as ``pts_tfm``. Walk-forward on 2021-22..2025-26 this beat
+    TimesFM's split every season (team-points MAE 9.43 vs 9.74 in 2021-22,
+    9.56 vs 9.79 in 2025-26; scripts/timesfm_margin.py): each team's series
+    forecast alone picks the winner only 58-64% of the time.
+    """
+    if team_pts.empty:
+        return team_pts.assign(pts_tfm=pd.Series(dtype=float))
+    out = team_pts.assign(pts_tfm=team_pts["pts"])
+    pts = out.set_index(["game_id", "team_id"])["pts"]
+    slope, intercept = line
+    for g in picks.itertuples(index=False):
+        home, away = (g.game_id, g.home_id), (g.game_id, g.away_id)
+        if home not in pts.index or away not in pts.index:
+            continue
+        p = min(max(float(g.p_home), 1e-4), 1 - 1e-4)
+        margin = slope * math.log(p / (1 - p)) + intercept
+        total = pts[home] + pts[away]
+        for key, mid in ((home, (total + margin) / 2), (away, (total - margin) / 2)):
+            row = (out["game_id"] == key[0]) & (out["team_id"] == key[1])
+            shift = mid - pts[key]
+            out.loc[row, ["pts", "pts_lo", "pts_hi"]] += shift
+    return out
 
 
 def player_frame(pv: pd.DataFrame, tf: pd.DataFrame) -> pd.DataFrame:

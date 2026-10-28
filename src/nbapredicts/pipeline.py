@@ -44,7 +44,9 @@ from .forecast import (
     TimesFM,
     forecast_player_lines,
     forecast_team_points,
+    margin_per_logit,
     player_frame,
+    split_total,
     team_frame,
 )
 from .impact import (
@@ -248,6 +250,32 @@ def track_record(
         "brier": float(((scored["p_home"] - y) ** 2).mean()),
         "team_pts_mae": float(pts_err.mean()),
     }
+    if "tfm_home_pts" in scored:
+        # TimesFM's own split, logged since the page started splitting its
+        # total by the winner pick.
+        raw = scored.dropna(subset=["tfm_home_pts", "tfm_away_pts"])
+        if not raw.empty:
+            record["team_pts_mae_tfm"] = float(
+                pd.concat(
+                    [
+                        raw["tfm_home_pts"] - raw["home_pts"],
+                        raw["tfm_away_pts"] - raw["away_pts"],
+                    ]
+                )
+                .abs()
+                .mean()
+            )
+            record["team_pts_mae_split"] = float(
+                pd.concat(
+                    [
+                        raw["pred_home_pts"] - raw["home_pts"],
+                        raw["pred_away_pts"] - raw["away_pts"],
+                    ]
+                )
+                .abs()
+                .mean()
+            )
+            record["team_pts_n_split"] = int(len(raw))
     if "p_market" in scored:
         both = scored.dropna(subset=["p_market"])
         if not both.empty:
@@ -397,6 +425,13 @@ def daily(
     pf = player_frame(pv, tf)
     fine_tune = daily_finetune(tfm, tf, pf) if finetune else {"used": False}
     team_pts = forecast_team_points(tfm, tf, upcoming_ids)
+    # TimesFM forecasts each team's points from its own series, which picks
+    # winners far worse than EQUINE; keep its total, split it by the pick.
+    team_pts = split_total(
+        team_pts,
+        winner[["game_id", "home_id", "away_id", "p_home"]],
+        margin_per_logit(odds),
+    )
     lines = forecast_player_lines(tfm, pf, tf, rosters, upcoming_ids, injuries)
 
     stamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -424,6 +459,8 @@ def daily(
             "spread": market.get(r.game_id, {}).get("spread"),
             "pred_home_pts": team_pred(r.game_id, r.home_id, "pts"),
             "pred_away_pts": team_pred(r.game_id, r.away_id, "pts"),
+            "tfm_home_pts": team_pred(r.game_id, r.home_id, "pts_tfm"),
+            "tfm_away_pts": team_pred(r.game_id, r.away_id, "pts_tfm"),
         }
         for r in winner.itertuples()
     ]
