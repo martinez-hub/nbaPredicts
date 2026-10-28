@@ -232,3 +232,30 @@ def test_apply_pregame_availability_replaces_the_three_features(league):
     base = out.set_index("game_id")["avail_diff"]
     assert moved[last["game_id"]] < base[last["game_id"]]
     assert np.allclose(moved.drop(last["game_id"]), base.drop(last["game_id"]))
+
+
+def test_apply_pregame_availability_keeps_upcoming_games_live(league):
+    from nbapredicts.features import apply_pregame_availability, pregame_availability
+
+    games, team_box, player_box = league
+    last = games.sort_values("start").iloc[-1]
+    g2 = games.copy()
+    g2.loc[g2["game_id"] == last["game_id"], ["status", "home_pts", "away_pts"]] = [
+        "scheduled",
+        np.nan,
+        np.nan,
+    ]
+    t2 = team_box[team_box["game_id"] != last["game_id"]]
+    p2 = player_box[player_box["game_id"] != last["game_id"]]
+    feats = features_for(g2, t2, p2, upcoming=[last["game_id"]]).reset_index()
+    teams = {f"Team {t}": t for t in games["home_id"].unique()}
+    empty = pd.DataFrame(columns=["team", "player", "status", "day"])
+    pre = pregame_availability(player_values(p2, g2), g2, empty, teams)
+    assert last["game_id"] not in set(pre["game_id"])  # computed live, not here
+    out = apply_pregame_availability(feats, pre).set_index("game_id")
+    before = feats.set_index("game_id")
+    assert (
+        out.loc[last["game_id"], "avail_diff"]
+        == before.loc[last["game_id"], "avail_diff"]
+    )
+    assert np.isfinite(out.loc[last["game_id"], "avail_delta_home"])

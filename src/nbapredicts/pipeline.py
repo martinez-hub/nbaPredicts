@@ -29,9 +29,11 @@ from .collect import (
 from .espn import ESPNClient, fetch_rosters
 from .features import (
     FEATURES,
+    apply_pregame_availability,
     build_features,
     current_rosters,
     player_values,
+    pregame_availability,
     team_state,
 )
 from .finetune import daily_finetune
@@ -324,6 +326,17 @@ def daily(
 
     state = team_state(games, team_box, pv, upcoming_ids, injuries, rosters)
     feats = build_features(games, state, upcoming_ids)
+    # Past games' availability as it was knowable before tip-off (roster and
+    # that day's official injury report), matching what upcoming games get.
+    feats = apply_pregame_availability(
+        feats,
+        pregame_availability(
+            pv,
+            games,
+            store.load("injury_reports"),
+            {t["name"]: tid for tid, t in teams.items()},
+        ),
+    )
 
     train = feats[(feats["status"] == "final") & (feats["season"] > FIRST_SEASON)]
     wm = fit(train, config)
