@@ -156,11 +156,11 @@ def official_injuries(
     now: pd.Timestamp,
     teams: dict[str, dict[str, Any]],
     rosters: pd.DataFrame,
-) -> tuple[pd.DataFrame, str | None]:
-    """The latest official report, matched to ESPN athlete ids."""
+) -> tuple[pd.DataFrame, str | None, pd.DataFrame]:
+    """The latest official report, matched to ESPN athlete ids, and its raw rows."""
     url = latest_report_url(season, now)
     if url is None:
-        return pd.DataFrame(), None
+        return pd.DataFrame(), None, pd.DataFrame()
     resp = requests.get(url, headers=_HEADERS, timeout=30)
     resp.raise_for_status()
     by_name = {t["name"]: tid for tid, t in teams.items()}
@@ -186,7 +186,7 @@ def official_injuries(
         len(report),
         len(matched),
     )
-    return matched[["team_id", "athlete_id", "name", "status"]], url
+    return matched[["team_id", "athlete_id", "name", "status"]], url, report
 
 
 def combine(espn: pd.DataFrame, official: pd.DataFrame) -> pd.DataFrame:
@@ -199,3 +199,42 @@ def combine(espn: pd.DataFrame, official: pd.DataFrame) -> pd.DataFrame:
     both = pd.concat(frames, ignore_index=True).drop_duplicates("athlete_id")
     both["p_play"] = both["status"].str.lower().map(P_PLAY).fillna(1.0)
     return both.reset_index(drop=True)
+
+
+REPORT_CUTOFF = (18, 30)  # the history keeps each day's last report by 6:30 PM ET
+
+
+def report_time(url: str) -> datetime | None:
+    m = _PDF.search(url)
+    if not m:
+        return None
+    day, hour, minute, half = m.groups()
+    return datetime.strptime(
+        f"{day} {hour}:{minute or '00'} {half}", "%Y-%m-%d %I:%M %p"
+    )
+
+
+def record_report(store: Any, raw: pd.DataFrame, url: str | None, season: int) -> bool:
+    """Add today's report to ``data/injury_reports`` (same rule as the archive).
+
+    A day keeps its latest report published by ``REPORT_CUTOFF``; later
+    reports are not recorded, so the history matches what the evening run
+    (and the backfilled seasons) saw.
+    """
+    published = report_time(url) if url else None
+    if raw.empty or published is None:
+        return False
+    if (published.hour, published.minute) > REPORT_CUTOFF:
+        return False
+    day, stamp = published.strftime("%Y-%m-%d"), published.strftime("%Y-%m-%d %H:%M")
+    rows = raw[["team", "player", "status", "reason"]].assign(
+        day=day, published=stamp, season=season
+    )
+    old = store.load("injury_reports")
+    if not old.empty:
+        same_day = old["day"] == day
+        if same_day.any() and old.loc[same_day, "published"].max() >= stamp:
+            return False
+        rows = pd.concat([old[~same_day], rows], ignore_index=True)
+    store.save("injury_reports", rows)
+    return True

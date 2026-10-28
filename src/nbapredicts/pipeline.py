@@ -45,7 +45,7 @@ from .forecast import (
     player_frame,
     team_frame,
 )
-from .injuries import combine, official_injuries
+from .injuries import combine, official_injuries, record_report
 from .market import fetch_odds
 from .stack import StackedWinner
 from .text_log import log_text
@@ -94,6 +94,7 @@ def gather_injuries(
     now: pd.Timestamp,
     teams: dict[str, dict[str, Any]],
     rosters: pd.DataFrame,
+    store: Store | None = None,
 ) -> tuple[pd.DataFrame, str]:
     """ESPN's injury list, refined by the NBA's official report when reachable.
 
@@ -104,9 +105,11 @@ def gather_injuries(
     official, source = pd.DataFrame(), "ESPN"
     if upcoming_ids:
         try:
-            official, url = official_injuries(season, now, teams, rosters)
+            official, url, raw = official_injuries(season, now, teams, rosters)
             if url and not official.empty:
                 source = "NBA official report " + url.rsplit("/", 1)[-1]
+            if store is not None and record_report(store, raw, url, season):
+                log.info("recorded %s in data/injury_reports", url.rsplit("/", 1)[-1])
         except Exception as err:  # network, WAF, or PDF layout changes
             log.warning("official injury report unavailable: %s", err)
     return combine(espn, official), source
@@ -313,7 +316,7 @@ def daily(
     espn_rosters = pd.DataFrame(fetch_rosters(client, list(teams)))
     rosters = current_rosters(pv, espn=espn_rosters)
     injuries, injury_source = gather_injuries(
-        client, upcoming_ids, season, now, teams, rosters
+        client, upcoming_ids, season, now, teams, rosters, store
     )
     market = fetch_market(client, upcoming)
     log_text(store, client, now, season)

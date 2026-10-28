@@ -68,3 +68,28 @@ def test_a_failing_official_report_falls_back_to_espn(monkeypatch):
     )
     assert source == "ESPN"
     assert injuries["p_play"].tolist() == [0.0]
+
+
+def test_record_report_keeps_the_days_last_report_before_the_cutoff(tmp_path):
+    from nbapredicts.collect import Store
+    from nbapredicts.injuries import record_report
+
+    store = Store(tmp_path)
+    url = "https://ak-static.cms.nba.com/referee/injury/Injury-Report_2026-10-28_{}.pdf"
+    raw = lambda status: pd.DataFrame(  # noqa: E731
+        {
+            "team": ["Brooklyn Nets"],
+            "player": ["Doe, Jo"],
+            "status": [status],
+            "reason": ["x"],
+        }
+    )
+    assert record_report(store, raw("Questionable"), url.format("11_30AM"), 2027)
+    assert record_report(store, raw("Out"), url.format("05_30PM"), 2027)  # replaces
+    assert not record_report(store, raw("Available"), url.format("07_45PM"), 2027)
+    assert not record_report(
+        store, raw("Probable"), url.format("01_00PM"), 2027
+    )  # older
+    saved = store.load("injury_reports")
+    assert saved["status"].tolist() == ["Out"]
+    assert saved["published"].tolist() == ["2026-10-28 17:30"]
