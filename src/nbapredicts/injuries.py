@@ -139,8 +139,16 @@ def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
             if "," not in player:
                 continue
             player = player[player.rfind(" ", 0, player.index(",")) + 1 :]
-            rows.append({"team": team, "player": player, "status": match.group(2)})
-    return pd.DataFrame(rows, columns=["team", "player", "status"])
+            reason = " ".join(line[match.end(2) :].split())  # first line of it
+            rows.append(
+                {
+                    "team": team,
+                    "player": player,
+                    "status": match.group(2),
+                    "reason": reason,
+                }
+            )
+    return pd.DataFrame(rows, columns=["team", "player", "status", "reason"])
 
 
 def official_injuries(
