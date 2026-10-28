@@ -29,15 +29,19 @@ _PDF = re.compile(
 STATUSES = ("Out", "Doubtful", "Questionable", "Probable", "Available")
 P_PLAY = {
     "out": 0.0,
-    "doubtful": 0.25,
+    # 1.4% of matched Doubtful players played (2018-19..2026-27 reports
+    # joined to box scores); Questionable 51%, Probable 82%.
+    "doubtful": 0.03,
     "questionable": 0.5,
     "day-to-day": 0.6,  # ESPN's only non-Out status
     "probable": 0.9,
     "available": 1.0,
 }
+# "Last, First" or, often in the PDFs, "Nance Jr.,Larry" with no space.
 _ROW = re.compile(
-    r"([^\s,][^,]*?,\s+[^\s].*?)\s{2,}(" + "|".join(STATUSES) + r")(?:\s{2,}|\s*$)"
+    r"([^\s,][^,]*?,\s*[^\s].*?)\s{2,}(" + "|".join(STATUSES) + r")(?:\s{2,}|\s*$)"
 )
+_GAME_DATE = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 _SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 # official.nba.com refuses non-browser user agents.
 _HEADERS = {
@@ -116,7 +120,7 @@ def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
     # Compared with spaces removed: the PDF prints "Portland  TrailBlazers".
     keys = {_squash(k): v for k, v in _team_keys(team_names).items()}
     rows: list[dict[str, Any]] = []
-    team = None
+    team = game_date = None
     for page in PdfReader(io.BytesIO(pdf)).pages:
         lines = page.extract_text(extraction_mode="layout").splitlines()
         # Layout extraction lists a page's rows bottom-up.
@@ -127,18 +131,30 @@ def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
             # reason's text from switching the team.
             if match:
                 comma = line.index(",", match.start(1))
-                head = line[: max(line.rfind("  ", 0, comma), 0)]
+                boundary = line.rfind("  ", 0, comma)
+                head = line[: max(boundary, 0)]
             else:
                 head = line
+            # A report covers today's games and often tomorrow's; the Game
+            # Date column marks the first row of each date.
+            dated = _GAME_DATE.search(head)
+            if dated:
+                game_date = datetime.strptime(dated.group(0), "%m/%d/%Y").date()
             found = _last_team(_squash(head), keys)
             if found:
                 team = found
             if team is None or match is None:
                 continue
-            player = " ".join(match.group(1).split()[-4:])  # drop leading columns
+            # The whole player column, so "Porter Jr., Michael" and "Jones
+            # Garcia, David" keep every word of the surname.
+            start = boundary + 2 if boundary >= 0 else match.start(1)
+            # The name column ends at the first 2+ space gap after the comma
+            # (older reports put the reason column before the status).
+            gap = re.search(r"\S\s{2,}", line[comma + 1 :])
+            end = comma + 1 + gap.start() + 1 if gap else match.start(2)
+            player = " ".join(line[start : min(end, match.start(2))].split())
             if "," not in player:
                 continue
-            player = player[player.rfind(" ", 0, player.index(",")) + 1 :]
             reason = " ".join(line[match.end(2) :].split())  # first line of it
             rows.append(
                 {
@@ -146,9 +162,12 @@ def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
                     "player": player,
                     "status": match.group(2),
                     "reason": reason,
+                    "game_date": game_date.isoformat() if game_date else None,
                 }
             )
-    return pd.DataFrame(rows, columns=["team", "player", "status", "reason"])
+    return pd.DataFrame(
+        rows, columns=["team", "player", "status", "reason", "game_date"]
+    )
 
 
 def official_injuries(
@@ -227,9 +246,8 @@ def record_report(store: Any, raw: pd.DataFrame, url: str | None, season: int) -
     if (published.hour, published.minute) > REPORT_CUTOFF:
         return False
     day, stamp = published.strftime("%Y-%m-%d"), published.strftime("%Y-%m-%d %H:%M")
-    rows = raw[["team", "player", "status", "reason"]].assign(
-        day=day, published=stamp, season=season
-    )
+    cols = ["team", "player", "status", "reason", "game_date"]
+    rows = raw.reindex(columns=cols).assign(day=day, published=stamp, season=season)
     old = store.load("injury_reports")
     if not old.empty:
         same_day = old["day"] == day
