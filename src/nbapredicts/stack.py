@@ -26,6 +26,10 @@ from .features import FEATURES
 from .winner import WinnerConfig, WinnerModel, fit
 
 STACK_INPUTS = ["mkt", "s1"]
+# Swept against the opening line on 2024-25/2025-26 (scripts/stack_sweep.py):
+# without the GP-feature LayerNorm and with SNGP's mean-field factor (pi/8)
+# this head beats the open by 0.00065 Brier on average; with EquineGP's
+# defaults it did not beat it at all; wider heads lost the edge.
 STACK_CONFIG = WinnerConfig(
     hidden=(8,),
     emb_dim=4,
@@ -34,6 +38,8 @@ STACK_CONFIG = WinnerConfig(
     max_epochs=80,
     patience=12,
     weight_decay=1e-3,
+    mean_field_factor=0.39269908169872414,  # pi / 8
+    normalize_gp_features=False,
 )
 
 
