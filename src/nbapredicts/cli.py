@@ -73,7 +73,13 @@ def main(argv: list[str] | None = None) -> None:
         import pandas as pd
 
         from .backtest import backtest_forecasts, backtest_winner
-        from .features import build_features, player_values, team_state
+        from .features import (
+            apply_pregame_availability,
+            build_features,
+            player_values,
+            pregame_availability,
+            team_state,
+        )
         from .finetune import finetune_point_head, training_series
         from .forecast import TimesFM, player_frame, team_frame
         from .pipeline import write_backtest
@@ -86,6 +92,16 @@ def main(argv: list[str] | None = None) -> None:
         pv = player_values(player_box, games)
         state = team_state(games, team_box, pv, [])
         feats = build_features(games, state, [])
+        teams = json.loads((root / "data" / "teams.json").read_text())
+        feats = apply_pregame_availability(
+            feats,
+            pregame_availability(
+                pv,
+                games,
+                store.load("injury_reports"),
+                {t["name"]: tid for tid, t in teams.items()},
+            ),
+        )
         winner = backtest_winner(feats, seasons, odds=store.load("odds"))
         if args.winner_only:
             previous = json.loads((root / "site/data/backtest.json").read_text())

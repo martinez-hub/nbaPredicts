@@ -552,25 +552,32 @@ def pregame_availability(
 def apply_pregame_availability(feats: pd.DataFrame, pre: pd.DataFrame) -> pd.DataFrame:
     """Replace the availability features with ``pregame_availability``'s values.
 
-    ``avail_diff`` becomes home minus away pre-game strength and
-    ``avail_delta_*`` each team's pre-game strength minus its average over
-    its previous ten games, so training sees what serving will see.
+    For finished games, ``avail_diff`` becomes home minus away pre-game
+    strength and ``avail_delta_*`` each team's pre-game strength minus its
+    average over its previous ten games. Upcoming games keep their live
+    strength (roster and today's report, already the pre-game definition);
+    their delta is taken against the same pre-game average.
     """
     pre = pre.merge(feats[["game_id", "start"]], on="game_id").sort_values("start")
     typical = pre.groupby("team_id")["avail_pre"].transform(
         lambda s: s.shift(1).rolling(10, min_periods=1).mean()
     )
+    recent = pre.groupby("team_id")["avail_pre"].apply(lambda s: s.tail(10).mean())
     pre = pre.assign(delta=(pre["avail_pre"] - typical).fillna(0.0)).set_index(
         ["game_id", "team_id"]
     )
     out = feats.copy()
-    home = list(zip(out["game_id"], out["home_id"], strict=True))
-    away = list(zip(out["game_id"], out["away_id"], strict=True))
-    h_pre = pre["avail_pre"].reindex(home).to_numpy()
-    a_pre = pre["avail_pre"].reindex(away).to_numpy()
+    for side in ("home", "away"):
+        keys = list(zip(out["game_id"], out[f"{side}_id"], strict=True))
+        value = pre["avail_pre"].reindex(keys).to_numpy()
+        delta = pre["delta"].reindex(keys).to_numpy()
+        live = out[f"{side[0]}_avail"].to_numpy(dtype=float)
+        live_delta = live - out[f"{side}_id"].map(recent).to_numpy(dtype=float)
+        has = ~np.isnan(value)
+        out[f"_{side}_pre"] = np.where(has, value, live)
+        out[f"avail_delta_{side}"] = np.nan_to_num(np.where(has, delta, live_delta))
+    both = out["_home_pre"].notna() & out["_away_pre"].notna()
     out["avail_diff"] = np.where(
-        np.isnan(h_pre) | np.isnan(a_pre), out["avail_diff"], h_pre - a_pre
+        both, out["_home_pre"] - out["_away_pre"], out["avail_diff"]
     )
-    out["avail_delta_home"] = pre["delta"].reindex(home).fillna(0.0).to_numpy()
-    out["avail_delta_away"] = pre["delta"].reindex(away).fillna(0.0).to_numpy()
-    return out
+    return out.drop(columns=["_home_pre", "_away_pre"])
