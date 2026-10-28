@@ -58,9 +58,36 @@ prediction time, so the open-line model was not deployed.
 CDN). Joined to box scores, matched players with each status played: Out
 0.1%, Doubtful 1.4%, Questionable 51%, Probable 82%, Available 85%.
 
-## Next
+## Player impact (minutes-weighted plus-minus)
 
-Turning "player X is out" into a team-strength change is where the remaining
-information is: the availability feature is a sum of box-score Game Scores.
-Play-by-play player impact (RAPM-style) and projected minutes are the next
-experiment (docs/research_plan.md, E4).
+`scripts/impact_eval.py`. Game-level adjusted plus-minus ratings (ridge 5,
+two-year half-life, refit monthly on earlier games only), projected minutes
+and the injury report give each team's expected strength in points of
+margin. Rating quality on the next month's games with actual minutes: margin
+MAE 11.16, correlation 0.475, 68.2% winners.
+
+| Brier | 2023-24 | 2024-25 | 2025-26 |
+|---|---|---|---|
+| Logistic, 25 features | 0.2096 | 0.2078 | 0.2048 |
+| Logistic, + impact | 0.2082 | 0.2063 | 0.2040 |
+| Stack + impact vs close | +0.0001 | −0.0003 | −0.0001 |
+| Stack + impact vs open | −0.0003 | −0.0003 | −0.0001 |
+
+The impact features improve the stand-alone model every season; next to
+either line they add nothing measurable (feature weight next to the open
+0.05-0.10). The opening line already prices roster strength.
+
+## Features-only EQUINE
+
+`scripts/equine_features_sweep.py`. With the impact features, EquineGP's
+defaults (LayerNorm on GP features, mean-field factor 25) gave Brier 0.2139;
+without the LayerNorm and with pi/8, 0.2070 (logistic 0.2061). Those are now
+the defaults.
+
+## Where this leaves "beating the market"
+
+Matching the closing line is achieved; beating it, or the opening line, is
+not, with every input tried so far. Remaining candidates from
+docs/research_plan.md: stint-level RAPM from play-by-play, a text model over
+the injury reports' reasons and logged news, and live grading against the
+line at prediction time, which the prediction log now records.
