@@ -39,10 +39,27 @@ log = logging.getLogger("injury_archive")
 
 
 def report_index() -> pd.DataFrame:
-    text = requests.get(CDX, timeout=300).text
+    # The CDX server is often slow or answers 503/504; a saved copy of its
+    # listing (cache.nosync/cdx_injury.txt) is used when present.
+    cached = ROOT / "cache.nosync" / "cdx_injury.txt"
+    text = cached.read_text() if cached.exists() else ""
+    for attempt in range(0 if text else 4):
+        try:
+            resp = requests.get(CDX, timeout=300)
+            if resp.status_code == 200 and "Injury-Report_" in resp.text:
+                text = resp.text
+                break
+        except requests.RequestException:
+            pass
+        time.sleep(30 * (attempt + 1))
+    if not text:
+        raise RuntimeError("the Wayback CDX index did not answer")
     rows = []
     for line in text.splitlines():
-        stamp, url = line.split(" ", 1)
+        parts = line.split(" ", 1)
+        if len(parts) != 2:
+            continue
+        stamp, url = parts
         m = NAME.search(url)
         if not m:
             continue

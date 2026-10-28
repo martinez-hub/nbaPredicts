@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 CORE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
 ODDS_COLS = [
     "game_id", "season", "books", "p_close", "p_open", "spread_close", "spread_open",
+    "p_models",
 ]  # fmt: skip
 
 
@@ -73,33 +74,68 @@ def _line(side: dict[str, Any], phase: str | None) -> tuple[float | None, float 
     return _american(block.get("moneyLine")), _number(block.get("pointSpread"))
 
 
+# ESPN lists prediction sites and aggregates alongside sportsbooks; none of
+# them is a price anyone can bet. Their moneylines are kept apart.
+MODEL_SITES = {"numberfire", "teamrankings", "accuscore"}
+NOT_BOOKS = MODEL_SITES | {"consensus", "opening", "fantasy911.com"}
+
+
+def _prob(item: dict[str, Any], phase: str | None) -> tuple[float | None, float | None]:
+    """(home win probability with margin removed, home spread) for one item."""
+    home, away = item.get("homeTeamOdds") or {}, item.get("awayTeamOdds") or {}
+    ml_h, sp = _line(home, phase)
+    ml_a, _ = _line(away, phase)
+    if ml_h is None or ml_a is None:
+        return None, None
+    if sp is None and phase is None:  # older seasons: one line per book
+        sp = _number(item.get("spread"))
+    # Spreads move in half points; anything else is a price that leaked into
+    # the field (seen in some books' opening lines).
+    if sp is not None and not (abs(sp) <= 30 and float(sp * 2).is_integer()):
+        sp = None
+    return devig_power(decimal_from_american(ml_h), decimal_from_american(ml_a)), sp
+
+
 def parse_core_odds(game_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
-    close_p, open_p, close_s, open_s = [], [], [], []
+    """Sportsbook consensus for one game, plus the opener and model sites.
+
+    ``p_close``: median over sportsbooks of each book's closing (or, before
+    2022-23, only) line. ``p_open``: median of the books' opening lines
+    (2022-23 on) or ESPN's ``Opening`` entry (2013-14 to 2016-17).
+    ``p_models``: median of numberfire / teamrankings / accuscore, which are
+    published forecasts, not prices.
+    """
+    close_p, open_p, close_s, open_s, model_p = [], [], [], [], []
     for item in payload.get("items", []):
-        name = (item.get("provider") or {}).get("name", "")
-        if "live" in name.lower():
+        name = (item.get("provider") or {}).get("name", "").strip().lower()
+        if "live" in name:
             continue
-        home, away = item.get("homeTeamOdds") or {}, item.get("awayTeamOdds") or {}
-        has_phases = isinstance(home.get("close"), dict)
-        for phase, probs, spreads in (
-            ("close" if has_phases else None, close_p, close_s),
-            ("open", open_p, open_s),
-        ):
-            if phase == "open" and not isinstance(home.get("open"), dict):
-                continue
-            ml_h, sp = _line(home, phase)
-            ml_a, _ = _line(away, phase)
-            if ml_h is None or ml_a is None:
-                continue
-            probs.append(
-                devig_power(decimal_from_american(ml_h), decimal_from_american(ml_a))
-            )
-            if sp is None and phase is None:  # older seasons: one line per book
-                sp = _number(item.get("spread"))
-            # Spreads move in half points; anything else is a price that
-            # leaked into the field (seen in some books' opening lines).
-            if sp is not None and abs(sp) <= 30 and float(sp * 2).is_integer():
-                spreads.append(sp)
+        has_phases = isinstance((item.get("homeTeamOdds") or {}).get("close"), dict)
+        if name == "opening":
+            p, sp = _prob(item, None)
+            if p is not None:
+                open_p.append(p)
+                if sp is not None:
+                    open_s.append(sp)
+            continue
+        if name in MODEL_SITES:
+            p, _ = _prob(item, "close" if has_phases else None)
+            if p is not None:
+                model_p.append(p)
+            continue
+        if name in NOT_BOOKS:
+            continue
+        p, sp = _prob(item, "close" if has_phases else None)
+        if p is not None:
+            close_p.append(p)
+            if sp is not None:
+                close_s.append(sp)
+        if isinstance((item.get("homeTeamOdds") or {}).get("open"), dict):
+            p, sp = _prob(item, "open")
+            if p is not None:
+                open_p.append(p)
+                if sp is not None:
+                    open_s.append(sp)
     if not close_p:
         return None
     median = lambda xs: float(np.median(xs)) if xs else None  # noqa: E731
@@ -110,6 +146,7 @@ def parse_core_odds(game_id: str, payload: dict[str, Any]) -> dict[str, Any] | N
         "p_open": median(open_p),
         "spread_close": median(close_s),
         "spread_open": median(open_s),
+        "p_models": median(model_p),
     }
 
 

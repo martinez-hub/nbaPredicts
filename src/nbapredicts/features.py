@@ -469,3 +469,103 @@ def build_features(
         np.nan,
     )
     return out.sort_values(["start", "game_id"]).reset_index(drop=True)
+
+
+def pregame_availability(
+    pv: pd.DataFrame,
+    games: pd.DataFrame,
+    reports: pd.DataFrame,
+    team_ids: dict[str, str],
+    window: int = 10,
+    samples: int = 256,
+) -> pd.DataFrame:
+    """Expected top-``ROTATION`` strength as it could be known before each game.
+
+    Roster: the players who appeared for the team in its previous ``window``
+    games, each valued as of his latest appearance before this game. Chance
+    of playing: that day's official injury report (Out 0, Doubtful 0.25,
+    Questionable 0.5, Probable 0.9, Available 1); players it does not list,
+    and every player on days without a report, count as available. Unlike
+    the box-score availability, nothing here is learned from the game itself.
+    ``team_ids`` maps the report's full team names to ESPN team ids.
+    """
+    from .injuries import P_PLAY, normalize_name
+
+    finals = games[games["status"] == "final"][["game_id", "start", "date"]]
+    app = pv[["game_id", "team_id", "athlete_id", "name", "post_value"]].merge(
+        finals, on="game_id"
+    )
+    team_games_ = (
+        app[["team_id", "game_id", "start", "date"]]
+        .drop_duplicates(["team_id", "game_id"])
+        .sort_values("start")
+    )
+    team_games_["k"] = team_games_.groupby("team_id").cumcount()
+    app = app.merge(team_games_[["team_id", "game_id", "k"]], on=["team_id", "game_id"])
+
+    # Each appearance counts toward the team's next ``window`` games.
+    spread = app.loc[app.index.repeat(window)].copy()
+    spread["target_k"] = spread["k"] + np.tile(np.arange(1, window + 1), len(app))
+    latest = (
+        spread.sort_values("k").groupby(["team_id", "target_k", "athlete_id"]).tail(1)
+    )
+    target = team_games_.rename(columns={"k": "target_k"})[
+        ["team_id", "target_k", "game_id", "date"]
+    ]
+    roster = latest[["team_id", "target_k", "athlete_id", "name", "post_value"]].merge(
+        target, on=["team_id", "target_k"]
+    )
+
+    rep = reports.copy()
+    rep["team_id"] = rep["team"].map(team_ids)
+    rep["key"] = rep["player"].map(normalize_name)
+    rep["date"] = pd.to_datetime(rep["day"]).dt.date
+    rep["p_play"] = rep["status"].str.lower().map(P_PLAY).fillna(1.0)
+    rep = rep.drop_duplicates(["team_id", "date", "key"])
+    roster["key"] = roster["name"].map(normalize_name)
+    roster["date"] = pd.to_datetime(roster["date"]).dt.date
+    roster = roster.merge(
+        rep[["team_id", "date", "key", "p_play"]],
+        on=["team_id", "date", "key"],
+        how="left",
+    )
+    roster["p_play"] = roster["p_play"].fillna(1.0)
+
+    rows = [
+        (
+            gid,
+            tid,
+            expected_top_sum(
+                g["post_value"].to_numpy(float), g["p_play"].to_numpy(float), samples
+            ),
+        )
+        for (gid, tid), g in roster.groupby(["game_id", "team_id"], sort=False)
+    ]
+    return pd.DataFrame(rows, columns=["game_id", "team_id", "avail_pre"])
+
+
+def apply_pregame_availability(feats: pd.DataFrame, pre: pd.DataFrame) -> pd.DataFrame:
+    """Replace the availability features with ``pregame_availability``'s values.
+
+    ``avail_diff`` becomes home minus away pre-game strength and
+    ``avail_delta_*`` each team's pre-game strength minus its average over
+    its previous ten games, so training sees what serving will see.
+    """
+    pre = pre.merge(feats[["game_id", "start"]], on="game_id").sort_values("start")
+    typical = pre.groupby("team_id")["avail_pre"].transform(
+        lambda s: s.shift(1).rolling(10, min_periods=1).mean()
+    )
+    pre = pre.assign(delta=(pre["avail_pre"] - typical).fillna(0.0)).set_index(
+        ["game_id", "team_id"]
+    )
+    out = feats.copy()
+    home = list(zip(out["game_id"], out["home_id"], strict=True))
+    away = list(zip(out["game_id"], out["away_id"], strict=True))
+    h_pre = pre["avail_pre"].reindex(home).to_numpy()
+    a_pre = pre["avail_pre"].reindex(away).to_numpy()
+    out["avail_diff"] = np.where(
+        np.isnan(h_pre) | np.isnan(a_pre), out["avail_diff"], h_pre - a_pre
+    )
+    out["avail_delta_home"] = pre["delta"].reindex(home).fillna(0.0).to_numpy()
+    out["avail_delta_away"] = pre["delta"].reindex(away).fillna(0.0).to_numpy()
+    return out
