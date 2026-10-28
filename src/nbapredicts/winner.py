@@ -43,6 +43,10 @@ class WinnerConfig:
     # logit harder toward 50/50 in proportion to the GP's variance. Not stored
     # in EQUINE's checkpoint, so WinnerModel.save/load carry it.
     mean_field_factor: float = 25.0
+    # EquineGP always LayerNorms the embedding before its random features,
+    # which discards the magnitude of a low-dimensional input (a stacked
+    # log-odds). Off for the market stack; not stored in EQUINE's checkpoint.
+    normalize_gp_features: bool = True
     seed: int = 0
 
 
@@ -92,6 +96,7 @@ class WinnerModel:
             "std": self.std.tolist(),
             "var_reference": self.var_reference.tolist(),
             "mean_field_factor": self.model.model.mean_field_factor,
+            "normalize_gp_features": self.model.model.normalize_gp_features,
         }
         (directory / "winner_meta.json").write_text(json.dumps(meta))
 
@@ -102,6 +107,8 @@ class WinnerModel:
         meta = json.loads((directory / "winner_meta.json").read_text())
         mff = meta.get("mean_field_factor", model.model.mean_field_factor)
         model.mean_field_factor = model.model.mean_field_factor = mff
+        norm = meta.get("normalize_gp_features", True)
+        model.normalize_gp_features = model.model.normalize_gp_features = norm
         return cls(
             model=model,
             mean=np.array(meta["mean"]),
@@ -146,6 +153,8 @@ def fit(
     )
     model.mean_field_factor = config.mean_field_factor
     model.model.mean_field_factor = config.mean_field_factor
+    model.normalize_gp_features = config.normalize_gp_features
+    model.model.normalize_gp_features = config.normalize_gp_features
     wm = WinnerModel(model, mean, std, np.array([0.0]), features)
 
     def dataset(df: pd.DataFrame) -> TensorDataset:
