@@ -236,6 +236,13 @@ def track_record(
         return {"season": season_label(season), "n": 0}, []
     y = (scored["home_pts"] > scored["away_pts"]).astype(float)
     correct = (scored["p_home"] > 0.5) == (y == 1)
+    # Predicted after the fact by `nbapredicts backfill` (see backfill.py).
+    backfilled = (
+        scored["backfilled"].eq(True)
+        if "backfilled" in scored
+        else pd.Series(False, index=scored.index)
+    )
+    scored = scored.assign(backfilled=backfilled)
     pts_err = pd.concat(
         [
             scored["pred_home_pts"] - scored["home_pts"],
@@ -250,6 +257,12 @@ def track_record(
         "brier": float(((scored["p_home"] - y) ** 2).mean()),
         "team_pts_mae": float(pts_err.mean()),
     }
+    if backfilled.any():
+        record["backfilled"] = int(backfilled.sum())
+        record["before_tipoff"] = {
+            "n": int((~backfilled).sum()),
+            "correct": int(correct[~backfilled].sum()),
+        }
     if "tfm_home_pts" in scored:
         # TimesFM's own split, logged since the page started splitting its
         # total by the winner pick.
@@ -315,6 +328,7 @@ def track_record(
             "pred_home_pts": r.pred_home_pts,
             "pred_away_pts": r.pred_away_pts,
             "correct": bool((r.p_home > 0.5) == (r.home_pts > r.away_pts)),
+            "backfilled": bool(r.backfilled),
         }
         for r in recent.itertuples()
     ]
@@ -461,6 +475,7 @@ def daily(
             "pred_away_pts": team_pred(r.game_id, r.away_id, "pts"),
             "tfm_home_pts": team_pred(r.game_id, r.home_id, "pts_tfm"),
             "tfm_away_pts": team_pred(r.game_id, r.away_id, "pts_tfm"),
+            "backfilled": False,
         }
         for r in winner.itertuples()
     ]
