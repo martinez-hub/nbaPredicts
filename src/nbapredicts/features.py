@@ -471,28 +471,26 @@ def build_features(
     return out.sort_values(["start", "game_id"]).reset_index(drop=True)
 
 
-def pregame_availability(
+def pregame_rosters(
     pv: pd.DataFrame,
     games: pd.DataFrame,
     reports: pd.DataFrame,
     team_ids: dict[str, str],
     window: int = 10,
-    samples: int = 256,
+    columns: tuple[str, ...] = ("post_value",),
 ) -> pd.DataFrame:
-    """Expected top-``ROTATION`` strength as it could be known before each game.
+    """Each finished game's roster as it could be known before tip-off.
 
     Roster: the players who appeared for the team in its previous ``window``
-    games, each valued as of his latest appearance before this game. Chance
-    of playing: that day's official injury report (Out 0, Doubtful 0.25,
-    Questionable 0.5, Probable 0.9, Available 1); players it does not list,
-    and every player on days without a report, count as available. Unlike
-    the box-score availability, nothing here is learned from the game itself.
-    ``team_ids`` maps the report's full team names to ESPN team ids.
+    games, with ``columns`` taken from each player's latest such appearance.
+    Chance of playing (``p_play``): that day's official injury report;
+    players it does not list, and everyone on days without a report, count
+    as available. ``team_ids`` maps the report's full team names to ids.
     """
     from .injuries import P_PLAY, normalize_name
 
     finals = games[games["status"] == "final"][["game_id", "start", "date"]]
-    app = pv[["game_id", "team_id", "athlete_id", "name", "post_value"]].merge(
+    app = pv[["game_id", "team_id", "athlete_id", "name", *columns]].merge(
         finals, on="game_id"
     )
     team_games_ = (
@@ -510,9 +508,9 @@ def pregame_availability(
         spread.sort_values("k").groupby(["team_id", "target_k", "athlete_id"]).tail(1)
     )
     target = team_games_.rename(columns={"k": "target_k"})[
-        ["team_id", "target_k", "game_id", "date"]
+        ["team_id", "target_k", "game_id", "start", "date"]
     ]
-    roster = latest[["team_id", "target_k", "athlete_id", "name", "post_value"]].merge(
+    roster = latest[["team_id", "target_k", "athlete_id", "name", *columns]].merge(
         target, on=["team_id", "target_k"]
     )
 
@@ -535,7 +533,20 @@ def pregame_availability(
         how="left",
     )
     roster["p_play"] = roster["p_play"].fillna(1.0)
+    return roster
 
+
+def pregame_availability(
+    pv: pd.DataFrame,
+    games: pd.DataFrame,
+    reports: pd.DataFrame,
+    team_ids: dict[str, str],
+    window: int = 10,
+    samples: int = 256,
+) -> pd.DataFrame:
+    """Expected top-``ROTATION`` strength as it could be known before each game
+    (see ``pregame_rosters``); nothing here is learned from the game itself."""
+    roster = pregame_rosters(pv, games, reports, team_ids, window)
     rows = [
         (
             gid,

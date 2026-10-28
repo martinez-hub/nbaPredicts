@@ -42,11 +42,14 @@ class WinnerConfig:
     # EquineGP hard-codes 25; SNGP's default is pi/8. Larger values shrink each
     # logit harder toward 50/50 in proportion to the GP's variance. Not stored
     # in EQUINE's checkpoint, so WinnerModel.save/load carry it.
-    mean_field_factor: float = 25.0
+    # pi/8 (SNGP's value) and no GP-feature LayerNorm: with pre-game
+    # availability and impact features this took the features-only model
+    # from Brier 0.2139 to 0.2070 on 2023-24..2025-26 (logistic: 0.2061).
+    mean_field_factor: float = 0.39269908169872414
     # EquineGP always LayerNorms the embedding before its random features,
     # which discards the magnitude of a low-dimensional input (a stacked
     # log-odds). Off for the market stack; not stored in EQUINE's checkpoint.
-    normalize_gp_features: bool = True
+    normalize_gp_features: bool = False
     seed: int = 0
 
 

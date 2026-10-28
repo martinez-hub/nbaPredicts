@@ -82,7 +82,8 @@ def main(argv: list[str] | None = None) -> None:
         )
         from .finetune import finetune_point_head, training_series
         from .forecast import TimesFM, player_frame, team_frame
-        from .pipeline import write_backtest
+        from .impact import apply_impact, monthly_ratings, pregame_impact
+        from .pipeline import MODEL_FEATURES, write_backtest
 
         games = store.load("games")
         team_box, player_box = store.load("team_box"), store.load("player_box")
@@ -102,7 +103,17 @@ def main(argv: list[str] | None = None) -> None:
                 {t["name"]: tid for tid, t in teams.items()},
             ),
         )
-        winner = backtest_winner(feats, seasons, odds=store.load("odds"))
+        ratings = monthly_ratings(player_box, games)
+        team_ids = {t["name"]: tid for tid, t in teams.items()}
+        feats = apply_impact(
+            feats,
+            pregame_impact(
+                pv, player_box, games, store.load("injury_reports"), team_ids, ratings
+            ),
+        )
+        winner = backtest_winner(
+            feats, seasons, odds=store.load("odds"), features=MODEL_FEATURES
+        )
         if args.winner_only:
             previous = json.loads((root / "site/data/backtest.json").read_text())
             kept = {
