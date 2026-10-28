@@ -10,10 +10,13 @@ of martinez-hub.github.io:
   points and each rotation player's points, rebounds, assists and threes, with
   an in-context regression on home/away, opponent defense and rest (XReg).
 
-A GitHub Actions job runs twice a day, collects the night's box scores,
-retrains, forecasts the next three days of games, commits the data and
-redeploys `site/` to GitHub Pages, where the website reads
-`/nbaPredicts/data/latest.json`.
+A GitHub Actions job runs each morning and late afternoon (Eastern),
+collects the night's box scores, retrains, forecasts the next three days of
+games, commits the data and redeploys `site/` to GitHub Pages, where the
+website reads `/nbaPredicts/data/latest.json`. GitHub's scheduler can run it
+hours late, so a LaunchAgent on the owner's Mac (`scripts/launchd/`) also
+starts it at 6:45 AM, 5:50 PM and 7:15 PM ET unless a run started in the
+previous 75 minutes.
 
 ## EQUINE version
 
@@ -73,10 +76,20 @@ uv sync
 uv run nbapredicts collect            # backfill 2012-13 to today (~20 min)
 uv run nbapredicts daily              # collect, retrain, forecast, publish
 uv run nbapredicts backtest           # walk-forward evaluation -> site/data/backtest.json
+uv run nbapredicts backfill           # predict, after the fact, finished games the job missed
 uv run pytest
 ```
 
-The workflow commits data to `main` twice a day, so `git pull --rebase` before
+The backup trigger:
+
+```bash
+install -m 755 scripts/launchd/nbapredicts-dispatch.sh ~/.local/bin/
+install -m 644 scripts/launchd/com.martinez-hub.nbapredicts-dispatch.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.martinez-hub.nbapredicts-dispatch.plist
+tail ~/Library/Logs/nbapredicts-dispatch.log
+```
+
+The workflow commits data to `main` several times a day, so `git pull --rebase` before
 pushing code changes.
 
 On a Mac whose Documents folder syncs to iCloud, keep the environment out of
