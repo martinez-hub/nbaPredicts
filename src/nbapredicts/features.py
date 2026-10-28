@@ -519,9 +519,14 @@ def pregame_availability(
     rep = reports.copy()
     rep["team_id"] = rep["team"].map(team_ids)
     rep["key"] = rep["player"].map(normalize_name)
-    rep["date"] = pd.to_datetime(rep["day"]).dt.date
+    # A report lists today's and tomorrow's games: join on each row's own
+    # game date, and when two reports cover a game keep the later one.
+    game_day = rep["game_date"] if "game_date" in rep else rep["day"]
+    rep["date"] = pd.to_datetime(game_day.fillna(rep["day"])).dt.date
     rep["p_play"] = rep["status"].str.lower().map(P_PLAY).fillna(1.0)
-    rep = rep.drop_duplicates(["team_id", "date", "key"])
+    order = rep["published"] if "published" in rep else rep["day"]
+    rep = rep.assign(_order=order).sort_values("_order")
+    rep = rep.drop_duplicates(["team_id", "date", "key"], keep="last")
     roster["key"] = roster["name"].map(normalize_name)
     roster["date"] = pd.to_datetime(roster["date"]).dt.date
     roster = roster.merge(

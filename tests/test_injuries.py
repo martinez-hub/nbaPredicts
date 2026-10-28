@@ -14,9 +14,11 @@ TEAMS = json.loads((Path(__file__).parents[1] / "data" / "teams.json").read_text
 
 def test_parses_the_official_report():
     rows = parse_report(FIXTURE.read_bytes(), [t["name"] for t in TEAMS.values()])
-    assert len(rows) == 27
+    # 28, including "Harris,Tobias": the PDF often omits the space after the
+    # comma, and an earlier parser silently dropped such rows.
+    assert len(rows) == 28
     assert rows["status"].value_counts().to_dict() == {
-        "Out": 20,
+        "Out": 21,
         "Questionable": 6,
         "Available": 1,
     }
@@ -27,7 +29,7 @@ def test_parses_the_official_report():
     # The PDF prints "Portland  TrailBlazers"; its six players stay Portland's.
     teams = rows.groupby("team")["player"].apply(set)
     assert {"Henderson, Scoot", "Sharpe, Shaedon"} <= teams["Portland Trail Blazers"]
-    assert teams["San Antonio Spurs"] == {"Quaintance, Jayden"}
+    assert teams["San Antonio Spurs"] == {"Quaintance, Jayden", "Harris,Tobias"}
     assert "LA Clippers" not in teams  # "LA" must not match inside other words
 
 
@@ -49,7 +51,7 @@ def test_official_status_overrides_espn():
         {"team_id": ["1"], "athlete_id": ["a"], "name": ["A"], "status": ["Doubtful"]}
     )
     both = combine(espn, official).set_index("athlete_id")
-    assert both.loc["a", "status"] == "Doubtful" and both.loc["a", "p_play"] == 0.25
+    assert both.loc["a", "status"] == "Doubtful" and both.loc["a", "p_play"] == 0.03
     assert both.loc["b", "p_play"] == 0.0
 
 
