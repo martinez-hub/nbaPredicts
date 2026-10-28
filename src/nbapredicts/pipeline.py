@@ -47,6 +47,13 @@ from .forecast import (
     player_frame,
     team_frame,
 )
+from .impact import (
+    IMPACT_FEATURES,
+    apply_impact,
+    live_impact,
+    monthly_ratings,
+    pregame_impact,
+)
 from .injuries import combine, official_injuries, record_report
 from .market import fetch_odds
 from .stack import StackedWinner
@@ -54,6 +61,8 @@ from .text_log import log_text
 from .winner import WinnerConfig, WinnerModel, fit
 
 log = logging.getLogger(__name__)
+
+MODEL_FEATURES = [*FEATURES, *IMPACT_FEATURES]
 
 WINDOW_DAYS = 3  # upcoming games shown: today and the next two days (ET)
 RESULT_DAYS = 7  # finished games listed under recent results
@@ -338,8 +347,30 @@ def daily(
         ),
     )
 
+    # Minutes-weighted player impact: past games as knowable before tip-off,
+    # upcoming games from today's rosters and report.
+    ratings = monthly_ratings(player_box, games)
+    team_ids = {t["name"]: tid for tid, t in teams.items()}
+    feats = apply_impact(
+        feats,
+        pd.concat(
+            [
+                pregame_impact(
+                    pv,
+                    player_box,
+                    games,
+                    store.load("injury_reports"),
+                    team_ids,
+                    ratings,
+                ),
+                live_impact(rosters, player_box, games, ratings, injuries, upcoming),
+            ],
+            ignore_index=True,
+        ),
+    )
+
     train = feats[(feats["status"] == "final") & (feats["season"] > FIRST_SEASON)]
-    wm = fit(train, config)
+    wm = fit(train, config, features=MODEL_FEATURES)
     wm.save(root / "models")
     WinnerModel.load(root / "models")  # the saved file must round-trip
     up = feats[feats["game_id"].isin(upcoming_ids)].reset_index(drop=True)
@@ -348,7 +379,7 @@ def daily(
     # the features-only model above stays the fallback and supplies novelty.
     odds = store.load("odds")
     stack_train = train.merge(odds[["game_id", "p_close"]], on="game_id", how="inner")
-    stacked = StackedWinner.fit(stack_train)
+    stacked = StackedWinner.fit(stack_train, features=MODEL_FEATURES)
     p_line = up["game_id"].map(lambda g: market.get(g, {}).get("p_market"))
     has_line = p_line.notna().to_numpy()
     winner["p_model"] = winner["p_home"]
@@ -479,7 +510,7 @@ def daily(
     # Written by scripts/equine_stack_tip.py alongside the pyproject pin.
     stack = json.loads((root / "equine_stack.json").read_text())
     cfg = config or WinnerConfig()
-    widths = [len(FEATURES), *cfg.hidden, cfg.emb_dim]
+    widths = [len(MODEL_FEATURES), *cfg.hidden, cfg.emb_dim]
     embedding_desc = "MLP " + "→".join(map(str, widths))
     finals = games[games["status"] == "final"]
     payload = {
@@ -502,7 +533,7 @@ def daily(
                 "prs": stack["prs"],
                 "head": "EquineGP: Laplace GP over random Fourier features",
                 "embedding": embedding_desc,
-                "features": FEATURES,
+                "features": MODEL_FEATURES,
                 "trained_on": int(len(train)),
                 "stacked": {
                     "inputs": ["betting line log-odds", "feature model log-odds"],

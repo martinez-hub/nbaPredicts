@@ -1,0 +1,110 @@
+[
+ {
+  "season": 2024,
+  "n": 1319,
+  "logistic_base": 0.20955,
+  "equine_base": 0.21782,
+  "logistic_impact": 0.20817,
+  "equine_impact": 0.2186,
+  "logistic_vs_close": [
+   8e-05,
+   -0.00067,
+   0.00086
+  ],
+  "equine_vs_close": [
+   0.00112,
+   -5e-05,
+   0.00235
+  ],
+  "weights_close": [
+   0.941,
+   -0.05
+  ],
+  "logistic_vs_open": [
+   -0.00028,
+   -0.00096,
+   0.00043
+  ],
+  "equine_vs_open": [
+   0.00056,
+   -0.00061,
+   0.00174
+  ],
+  "weights_open": [
+   0.94,
+   0.052
+  ]
+ },
+ {
+  "season": 2025,
+  "n": 1321,
+  "logistic_base": 0.20775,
+  "equine_base": 0.21311,
+  "logistic_impact": 0.20626,
+  "equine_impact": 0.21147,
+  "logistic_vs_close": [
+   -0.00031,
+   -0.00107,
+   0.00046
+  ],
+  "equine_vs_close": [
+   0.0001,
+   -0.00092,
+   0.00113
+  ],
+  "weights_close": [
+   0.958,
+   -0.059
+  ],
+  "logistic_vs_open": [
+   -0.00027,
+   -0.00104,
+   0.00053
+  ],
+  "equine_vs_open": [
+   -5e-05,
+   -0.00262,
+   0.00248
+  ],
+  "weights_open": [
+   0.953,
+   0.046
+  ]
+ },
+ {
+  "season": 2026,
+  "n": 1318,
+  "logistic_base": 0.20477,
+  "equine_base": 0.21149,
+  "logistic_impact": 0.20396,
+  "equine_impact": 0.21005,
+  "logistic_vs_close": [
+   -7e-05,
+   -0.00078,
+   0.00067
+  ],
+  "equine_vs_close": [
+   0.00054,
+   -0.00026,
+   0.00132
+  ],
+  "weights_close": [
+   0.948,
+   -0.042
+  ],
+  "logistic_vs_open": [
+   -0.00013,
+   -0.00095,
+   0.00073
+  ],
+  "equine_vs_open": [
+   5e-05,
+   -0.00118,
+   0.0013
+  ],
+  "weights_open": [
+   0.885,
+   0.1
+  ]
+ }
+]

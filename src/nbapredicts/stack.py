@@ -53,21 +53,25 @@ class Stage1:
     model: LogisticRegression
     mean: np.ndarray
     std: np.ndarray
+    features: list[str]
 
     @classmethod
-    def fit(cls, train: pd.DataFrame) -> Stage1:
-        x = train[FEATURES].to_numpy(dtype=float)
+    def fit(cls, train: pd.DataFrame, features: list[str] | None = None) -> Stage1:
+        features = list(features or FEATURES)
+        x = train[features].to_numpy(dtype=float)
         mean, std = np.nanmean(x, axis=0), np.nanstd(x, axis=0) + 1e-9
         z = np.nan_to_num((x - mean) / std)
         model = LogisticRegression(C=1.0, max_iter=3000).fit(z, train["home_win"])
-        return cls(model, mean, std)
+        return cls(model, mean, std, features)
 
     def logit(self, df: pd.DataFrame) -> np.ndarray:
-        x = df[FEATURES].to_numpy(dtype=float)
+        x = df[self.features].to_numpy(dtype=float)
         return self.model.decision_function(np.nan_to_num((x - self.mean) / self.std))
 
 
-def out_of_fold_stage1(train: pd.DataFrame) -> np.ndarray:
+def out_of_fold_stage1(
+    train: pd.DataFrame, features: list[str] | None = None
+) -> np.ndarray:
     """Stage-1 log-odds for each training game from a model fit without it.
 
     Folds are seasons (leave one season out); with fewer than three seasons,
@@ -82,7 +86,7 @@ def out_of_fold_stage1(train: pd.DataFrame) -> np.ndarray:
     out = np.full(len(train), np.nan)
     for fold in np.unique(folds):
         held = folds == fold
-        out[held] = Stage1.fit(train[~held]).logit(train[held])
+        out[held] = Stage1.fit(train[~held], features).logit(train[held])
     return out
 
 
@@ -93,14 +97,17 @@ class StackedWinner:
 
     @classmethod
     def fit(
-        cls, train: pd.DataFrame, config: WinnerConfig = STACK_CONFIG
+        cls,
+        train: pd.DataFrame,
+        config: WinnerConfig = STACK_CONFIG,
+        features: list[str] | None = None,
     ) -> StackedWinner:
         """``train`` needs the features, ``home_win``, ``season`` and ``p_close``."""
         train = train.dropna(subset=["p_close", "home_win"]).copy()
         train["mkt"] = market_logit(train["p_close"])
-        train["s1"] = out_of_fold_stage1(train)
+        train["s1"] = out_of_fold_stage1(train, features)
         head = fit(train, config, features=STACK_INPUTS)
-        return cls(Stage1.fit(train), head)
+        return cls(Stage1.fit(train, features), head)
 
     def predict(self, df: pd.DataFrame, p_market: pd.Series) -> pd.DataFrame:
         x = df.copy()
