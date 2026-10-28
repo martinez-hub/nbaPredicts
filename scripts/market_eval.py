@@ -70,6 +70,12 @@ def main() -> None:
     parser.add_argument("--seasons", type=int, nargs="+", default=[2024, 2025, 2026])
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument(
+        "--train-from",
+        type=int,
+        default=FIRST_SEASON + 1,
+        help="first season used for training (reports exist from 2018-19)",
+    )
+    parser.add_argument(
         "--avail",
         choices=["hindsight", "pregame"],
         default="hindsight",
@@ -101,7 +107,8 @@ def main() -> None:
 
     results = []
     for season in args.seasons:
-        past, test = feats[feats["season"] < season], feats[feats["season"] == season]
+        past = feats[(feats["season"] < season) & (feats["season"] >= args.train_from)]
+        test = feats[feats["season"] == season]
         y = test["home_win"].to_numpy()
         row: dict = {"season": season, "n": int(len(test))}
         row["market_close"] = cm(y, test["p_close"].to_numpy())["brier"]
@@ -141,7 +148,9 @@ def main() -> None:
         results.append(row)
         print(json.dumps(row, default=lambda v: round(v, 5)), flush=True)
 
-    out = args.out or ROOT / f"docs/results/market_eval_{args.avail}.json"
+    out = args.out or ROOT / (
+        f"docs/results/market_eval_{args.avail}_from{args.train_from}.json"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=1, default=float) + "\n")
 
