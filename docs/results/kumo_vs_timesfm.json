@@ -10,7 +10,43 @@
   "standardizer_std": [
    8.693300247192383
   ],
-  "standardizer_size": 1
+  "standardizer_size": 1,
+  "finetune": {
+   "windows": 8000,
+   "held_out": 1200,
+   "best_val_mae": 4.0345,
+   "zero_shot_val_mae": 4.0544,
+   "history": [
+    {
+     "epoch": 0,
+     "val_mae": 4.0544
+    },
+    {
+     "epoch": 1,
+     "val_mae": 4.059
+    },
+    {
+     "epoch": 2,
+     "val_mae": 4.0345
+    },
+    {
+     "epoch": 3,
+     "val_mae": 4.1271
+    },
+    {
+     "epoch": 4,
+     "val_mae": 4.1037
+    },
+    {
+     "epoch": 5,
+     "val_mae": 4.0515
+    },
+    {
+     "epoch": 6,
+     "val_mae": 4.1349
+    }
+   ]
+  }
  },
  "team_points": {
   "n": 2636,
@@ -19,6 +55,7 @@
   "mae_baseline": 10.3457,
   "mae_kumo_released": 10.7249,
   "mae_kumo_own_scale": 10.7249,
+  "mae_kumo_finetuned": 10.5132,
   "kumo_released_minus_tfm_xreg": [
    0.9386,
    0.7534,
@@ -38,6 +75,16 @@
    0.3513,
    0.2153,
    0.4802
+  ],
+  "kumo_finetuned_minus_tfm_xreg": [
+   0.7269,
+   0.56,
+   0.8951
+  ],
+  "kumo_finetuned_minus_tfm_plain": [
+   0.1396,
+   0.024,
+   0.2568
   ]
  },
  "game_total": {
@@ -47,25 +94,36 @@
   "mae_baseline": 16.1012,
   "mae_kumo_released": 16.4779,
   "mae_kumo_own_scale": 16.4779,
+  "mae_kumo_finetuned": 16.1965,
   "kumo_released_minus_tfm_xreg": [
    1.0997,
-   0.7003,
-   1.4924
+   0.7194,
+   1.4825
   ],
   "kumo_released_minus_tfm_plain": [
    0.3986,
-   0.0998,
-   0.6908
+   0.1022,
+   0.6974
   ],
   "kumo_own_scale_minus_tfm_xreg": [
    1.0997,
-   0.7007,
-   1.5055
+   0.7182,
+   1.5145
   ],
   "kumo_own_scale_minus_tfm_plain": [
    0.3986,
-   0.1065,
-   0.7011
+   0.0874,
+   0.6938
+  ],
+  "kumo_finetuned_minus_tfm_xreg": [
+   0.8182,
+   0.4811,
+   1.1599
+  ],
+  "kumo_finetuned_minus_tfm_plain": [
+   0.1172,
+   -0.1242,
+   0.3465
   ]
  },
  "winner_accuracy": {
@@ -73,7 +131,8 @@
   "tfm_plain": 0.5721,
   "baseline": 0.5789,
   "kumo_released": 0.5607,
-  "kumo_own_scale": 0.5607
+  "kumo_own_scale": 0.5607,
+  "kumo_finetuned": 0.5698
  },
  "players": {
   "pts": {
@@ -83,25 +142,36 @@
    "mae_baseline": 4.5782,
    "mae_kumo_released": 5.4262,
    "mae_kumo_own_scale": 4.6622,
+   "mae_kumo_finetuned": 4.6716,
    "kumo_released_minus_tfm_xreg": [
     0.8674,
-    0.7456,
-    0.9984
+    0.7354,
+    0.9993
    ],
    "kumo_released_minus_tfm_plain": [
     0.8602,
-    0.728,
-    0.9869
+    0.7274,
+    0.9909
    ],
    "kumo_own_scale_minus_tfm_xreg": [
     0.1033,
-    0.0414,
-    0.1609
+    0.045,
+    0.1646
    ],
    "kumo_own_scale_minus_tfm_plain": [
     0.0962,
-    0.0368,
-    0.1549
+    0.0353,
+    0.1576
+   ],
+   "kumo_finetuned_minus_tfm_xreg": [
+    0.1127,
+    0.0626,
+    0.1675
+   ],
+   "kumo_finetuned_minus_tfm_plain": [
+    0.1055,
+    0.0532,
+    0.1612
    ],
    "n_context_256_plus": 1512,
    "context_256_plus": {
@@ -111,25 +181,36 @@
     "mae_baseline": 4.8469,
     "mae_kumo_released": 5.0302,
     "mae_kumo_own_scale": 4.928,
+    "mae_kumo_finetuned": 4.938,
     "kumo_released_minus_tfm_xreg": [
      0.2446,
-     0.1332,
-     0.3509
+     0.1359,
+     0.3557
     ],
     "kumo_released_minus_tfm_plain": [
      0.2323,
-     0.1175,
-     0.3372
+     0.1243,
+     0.3368
     ],
     "kumo_own_scale_minus_tfm_xreg": [
      0.1424,
-     0.0528,
-     0.2323
+     0.0548,
+     0.2285
     ],
     "kumo_own_scale_minus_tfm_plain": [
      0.1301,
-     0.0413,
-     0.2188
+     0.0418,
+     0.2178
+    ],
+    "kumo_finetuned_minus_tfm_xreg": [
+     0.1525,
+     0.077,
+     0.2272
+    ],
+    "kumo_finetuned_minus_tfm_plain": [
+     0.1402,
+     0.0648,
+     0.2187
     ]
    }
   },
@@ -140,25 +221,36 @@
    "mae_baseline": 1.9089,
    "mae_kumo_released": 2.4358,
    "mae_kumo_own_scale": 1.9274,
+   "mae_kumo_finetuned": 1.889,
    "kumo_released_minus_tfm_xreg": [
     0.5657,
-    0.5034,
-    0.6275
+    0.5018,
+    0.6287
    ],
    "kumo_released_minus_tfm_plain": [
     0.5646,
-    0.5016,
-    0.625
+    0.4998,
+    0.6303
    ],
    "kumo_own_scale_minus_tfm_xreg": [
     0.0573,
-    0.0314,
-    0.0842
+    0.0327,
+    0.0834
    ],
    "kumo_own_scale_minus_tfm_plain": [
     0.0562,
-    0.0322,
-    0.0807
+    0.0305,
+    0.0799
+   ],
+   "kumo_finetuned_minus_tfm_xreg": [
+    0.0189,
+    -0.0008,
+    0.0413
+   ],
+   "kumo_finetuned_minus_tfm_plain": [
+    0.0179,
+    -0.0038,
+    0.0378
    ],
    "n_context_256_plus": 1512,
    "context_256_plus": {
@@ -168,25 +260,36 @@
     "mae_baseline": 1.9281,
     "mae_kumo_released": 2.0256,
     "mae_kumo_own_scale": 1.944,
+    "mae_kumo_finetuned": 1.9241,
     "kumo_released_minus_tfm_xreg": [
      0.1471,
      0.0992,
-     0.1961
+     0.1939
     ],
     "kumo_released_minus_tfm_plain": [
      0.1433,
-     0.0923,
-     0.19
+     0.0927,
+     0.1949
     ],
     "kumo_own_scale_minus_tfm_xreg": [
      0.0655,
-     0.0307,
-     0.1018
+     0.0271,
+     0.1021
     ],
     "kumo_own_scale_minus_tfm_plain": [
      0.0616,
-     0.0274,
-     0.097
+     0.0243,
+     0.0961
+    ],
+    "kumo_finetuned_minus_tfm_xreg": [
+     0.0455,
+     0.0126,
+     0.0743
+    ],
+    "kumo_finetuned_minus_tfm_plain": [
+     0.0417,
+     0.0107,
+     0.0709
     ]
    }
   },
@@ -197,25 +300,36 @@
    "mae_baseline": 1.3677,
    "mae_kumo_released": 1.763,
    "mae_kumo_own_scale": 1.3868,
+   "mae_kumo_finetuned": 1.3636,
    "kumo_released_minus_tfm_xreg": [
     0.4313,
-    0.385,
-    0.4764
+    0.3856,
+    0.4782
    ],
    "kumo_released_minus_tfm_plain": [
     0.4271,
-    0.3818,
-    0.4756
+    0.3828,
+    0.4757
    ],
    "kumo_own_scale_minus_tfm_xreg": [
     0.0552,
-    0.0362,
-    0.0749
+    0.0377,
+    0.0747
    ],
    "kumo_own_scale_minus_tfm_plain": [
     0.0509,
-    0.031,
-    0.0709
+    0.0326,
+    0.0695
+   ],
+   "kumo_finetuned_minus_tfm_xreg": [
+    0.032,
+    0.0166,
+    0.0479
+   ],
+   "kumo_finetuned_minus_tfm_plain": [
+    0.0277,
+    0.0127,
+    0.0437
    ],
    "n_context_256_plus": 1512,
    "context_256_plus": {
@@ -225,25 +339,36 @@
     "mae_baseline": 1.4423,
     "mae_kumo_released": 1.5283,
     "mae_kumo_own_scale": 1.4705,
+    "mae_kumo_finetuned": 1.4492,
     "kumo_released_minus_tfm_xreg": [
      0.1226,
-     0.0849,
-     0.1587
+     0.0873,
+     0.1597
     ],
     "kumo_released_minus_tfm_plain": [
      0.1165,
-     0.0789,
-     0.1531
+     0.0802,
+     0.1521
     ],
     "kumo_own_scale_minus_tfm_xreg": [
      0.0648,
-     0.0382,
-     0.0922
+     0.0383,
+     0.0913
     ],
     "kumo_own_scale_minus_tfm_plain": [
      0.0587,
-     0.0327,
-     0.0833
+     0.0322,
+     0.0856
+    ],
+    "kumo_finetuned_minus_tfm_xreg": [
+     0.0434,
+     0.0206,
+     0.0657
+    ],
+    "kumo_finetuned_minus_tfm_plain": [
+     0.0373,
+     0.0159,
+     0.06
     ]
    }
   },
@@ -254,25 +379,36 @@
    "mae_baseline": 0.9008,
    "mae_kumo_released": 1.1757,
    "mae_kumo_own_scale": 0.9132,
+   "mae_kumo_finetuned": 0.8936,
    "kumo_released_minus_tfm_xreg": [
     0.3025,
-    0.2685,
-    0.3368
+    0.27,
+    0.334
    ],
    "kumo_released_minus_tfm_plain": [
     0.3053,
-    0.2731,
-    0.3396
+    0.2728,
+    0.3371
    ],
    "kumo_own_scale_minus_tfm_xreg": [
     0.04,
-    0.0271,
-    0.0537
+    0.0263,
+    0.0529
    ],
    "kumo_own_scale_minus_tfm_plain": [
     0.0428,
-    0.0295,
-    0.0563
+    0.0297,
+    0.0568
+   ],
+   "kumo_finetuned_minus_tfm_xreg": [
+    0.0204,
+    0.01,
+    0.0311
+   ],
+   "kumo_finetuned_minus_tfm_plain": [
+    0.0232,
+    0.012,
+    0.0337
    ],
    "n_context_256_plus": 1512,
    "context_256_plus": {
@@ -282,25 +418,36 @@
     "mae_baseline": 0.9776,
     "mae_kumo_released": 1.0364,
     "mae_kumo_own_scale": 0.9921,
+    "mae_kumo_finetuned": 0.9791,
     "kumo_released_minus_tfm_xreg": [
      0.0847,
-     0.0592,
-     0.1109
+     0.0589,
+     0.1097
     ],
     "kumo_released_minus_tfm_plain": [
      0.0877,
-     0.0633,
-     0.1135
+     0.0621,
+     0.1126
     ],
     "kumo_own_scale_minus_tfm_xreg": [
      0.0403,
-     0.0212,
-     0.0588
+     0.0224,
+     0.0594
     ],
     "kumo_own_scale_minus_tfm_plain": [
      0.0433,
-     0.0244,
-     0.0617
+     0.0251,
+     0.0629
+    ],
+    "kumo_finetuned_minus_tfm_xreg": [
+     0.0274,
+     0.0113,
+     0.0428
+    ],
+    "kumo_finetuned_minus_tfm_plain": [
+     0.0303,
+     0.0152,
+     0.0465
     ]
    }
   }

@@ -1,0 +1,102 @@
+{
+ "team_points": {
+  "n_fit": 1450,
+  "n_test": 1186,
+  "coef_timesfm": [
+   36.862,
+   0.686
+  ],
+  "mae_timesfm": 10.0521,
+  "coef_timesfm_kumo": [
+   34.569,
+   0.668,
+   0.038
+  ],
+  "mae_timesfm_kumo": 10.0624,
+  "kumo_added": [
+   0.0103,
+   0.0006,
+   0.0205
+  ]
+ },
+ "pts": {
+  "n_fit": 1636,
+  "n_test": 1364,
+  "coef_timesfm": [
+   1.247,
+   0.925
+  ],
+  "mae_timesfm": 4.6247,
+  "coef_timesfm_kumo": [
+   1.008,
+   0.698,
+   0.245
+  ],
+  "mae_timesfm_kumo": 4.6195,
+  "kumo_added": [
+   -0.0052,
+   -0.0279,
+   0.0167
+  ]
+ },
+ "reb": {
+  "n_fit": 1636,
+  "n_test": 1364,
+  "coef_timesfm": [
+   0.565,
+   0.892
+  ],
+  "mae_timesfm": 1.9168,
+  "coef_timesfm_kumo": [
+   0.471,
+   0.645,
+   0.264
+  ],
+  "mae_timesfm_kumo": 1.9204,
+  "kumo_added": [
+   0.0036,
+   -0.0065,
+   0.0141
+  ]
+ },
+ "ast": {
+  "n_fit": 1636,
+  "n_test": 1364,
+  "coef_timesfm": [
+   0.32,
+   0.97
+  ],
+  "mae_timesfm": 1.3261,
+  "coef_timesfm_kumo": [
+   0.251,
+   0.721,
+   0.263
+  ],
+  "mae_timesfm_kumo": 1.3279,
+  "kumo_added": [
+   0.0018,
+   -0.0051,
+   0.0088
+  ]
+ },
+ "fg3m": {
+  "n_fit": 1636,
+  "n_test": 1364,
+  "coef_timesfm": [
+   0.293,
+   0.925
+  ],
+  "mae_timesfm": 0.9153,
+  "coef_timesfm_kumo": [
+   0.256,
+   0.753,
+   0.182
+  ],
+  "mae_timesfm_kumo": 0.9096,
+  "kumo_added": [
+   -0.0057,
+   -0.0089,
+   -0.002
+  ]
+ }
+}
