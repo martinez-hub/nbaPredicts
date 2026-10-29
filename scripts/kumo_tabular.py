@@ -26,6 +26,7 @@ Three steps; ``infer`` runs in an environment with structured-data-models
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import sys
 import time
@@ -155,7 +156,13 @@ def _probs(out) -> np.ndarray:
     raise ValueError(f"no column for class 1 in {list(df.columns)}")
 
 
-def infer(smoke: bool, models: list[str], context_seasons: int) -> None:
+def infer(
+    smoke: bool,
+    models: list[str],
+    context_seasons: int,
+    seasons: tuple[int, ...] = SEASONS,
+    settings: tuple[str, ...] = ("no_line", "with_line"),
+) -> None:
     import sdm
     import torch
     from sdm import RelatedTables, TableTensor
@@ -259,15 +266,20 @@ def infer(smoke: bool, models: list[str], context_seasons: int) -> None:
         "tabicl_v2": lambda: TabICLv2(device=device),
         "kumo_relational": lambda: KumoRelational(task="classification", device=device),
     }
-    results = []
-    for season in SEASONS:
-        for setting in ("no_line", "with_line"):
+    # One file per run, so an interrupted pass resumes where it stopped.
+    runs = WORK / ("smoke_runs" if smoke else "runs")
+    runs.mkdir(exist_ok=True)
+    for season in seasons:
+        for setting in settings:
             cols = feats + (["mkt"] if setting == "with_line" else [])
             pool = games if setting == "no_line" else games[games["mkt"].notna()]
             ctx, qry = pool[pool["season"] < season], pool[pool["season"] == season]
             if smoke:
                 ctx, qry = ctx.tail(2000), qry.head(300)
             for name in models:
+                path = runs / f"{season}_{setting}_{name}.csv"
+                if path.exists():
+                    continue
                 c = ctx[ctx["season"] >= season - context_seasons]
                 started = time.time()
                 model = builders[name]()
@@ -286,24 +298,28 @@ def infer(smoke: bool, models: list[str], context_seasons: int) -> None:
                     "mean_p_losses": round(float(p[y == 0].mean()), 3),
                 }
                 print(json.dumps(info), flush=True)
-                results.append(
-                    pd.DataFrame(
-                        {
-                            "game_id": qry["game_id"],
-                            "season": season,
-                            "setting": setting,
-                            "model": name,
-                            "p_home": p,
-                        }
-                    )
-                )
+                pd.DataFrame(
+                    {
+                        "game_id": qry["game_id"],
+                        "season": season,
+                        "setting": setting,
+                        "model": name,
+                        "p_home": p,
+                    }
+                ).to_csv(path, index=False)
+                # Memory piled up across runs until the Mac swapped.
                 del model
+                gc.collect()
+                if device.type == "mps":
+                    torch.mps.empty_cache()
             if smoke:
                 break
         if smoke:
             break
     out = WORK / ("smoke_preds.csv" if smoke else "fm_preds.csv")
-    pd.concat(results).to_csv(out, index=False)
+    pd.concat(
+        pd.read_csv(f, dtype={"game_id": str}) for f in sorted(runs.glob("*.csv"))
+    ).to_csv(out, index=False)
 
 
 # --------------------------------------------------------------------------
@@ -358,9 +374,81 @@ def score() -> None:
     )
 
 
+def stack() -> None:
+    """Kumo Tabular as a third input to EQUINE's stack, next to the line.
+
+    Kumo Tabular's no-line predictions for 2016-17 on are each walk-forward
+    (four labeled seasons before the predicted one), so they can be a stack
+    input for training and test games alike. Fit on 2016-17..S-1, test on S:
+    logistic stacks over [line, stage 1] and [line, stage 1, Kumo] on the
+    same games, and the EQUINE head over the three against the published one.
+    """
+    from sklearn.linear_model import LogisticRegression
+
+    from nbapredicts.backtest import classification_metrics as cm
+    from nbapredicts.stack import STACK_CONFIG, Stage1, market_logit, out_of_fold_stage1
+    from nbapredicts.winner import fit
+
+    feats = json.loads((WORK / "features.json").read_text())
+    games = pd.read_csv(WORK / "games.csv", dtype={"game_id": str})
+    runs = sorted((WORK / "runs").glob("*_no_line_kumo_tabular.csv"))
+    kt = pd.concat(pd.read_csv(f, dtype={"game_id": str}) for f in runs)
+    games = games.merge(
+        kt[["game_id", "p_home"]].rename(columns={"p_home": "p_kumo"}), on="game_id"
+    )
+    games = games[games["mkt"].notna()].copy()
+    games["kumo"] = market_logit(games["p_kumo"])
+    eq = pd.read_csv(WORK / "equine_preds.csv", dtype={"game_id": str}).set_index(
+        "game_id"
+    )
+    out = []
+    for season in SEASONS:
+        tr, te = (
+            games[games["season"] < season].copy(),
+            games[games["season"] == season].copy(),
+        )
+        tr["s1"] = out_of_fold_stage1(tr, feats)
+        te["s1"] = Stage1.fit(tr, feats).logit(te)
+        y = te["home_win"].to_numpy()
+        p, weights = {}, {}
+        for name, cols in (
+            ("logistic_stack", ["mkt", "s1"]),
+            ("logistic_stack_kumo", ["mkt", "s1", "kumo"]),
+        ):
+            lr = LogisticRegression(C=1e6).fit(tr[cols], tr["home_win"])
+            p[name] = lr.predict_proba(te[cols])[:, 1]
+            weights[name] = lr.coef_[0].round(3).tolist()
+        p["equine_stack_kumo"] = (
+            fit(tr, STACK_CONFIG, features=["mkt", "s1", "kumo"])
+            .predict(te)["p_home"]
+            .to_numpy()
+        )
+        p["equine_stack"] = eq["equine_stack"].reindex(te["game_id"]).to_numpy()
+        p["close"] = te["p_close"].to_numpy()
+        row = {
+            "season": season,
+            "n": int(len(te)),
+            "train_games": int(len(tr)),
+            "brier": {k: round(cm(y, v)["brier"], 5) for k, v in p.items()},
+            "weights": weights,
+            "kumo_added_logistic": paired(
+                y, p["logistic_stack_kumo"], p["logistic_stack"]
+            ),
+            "equine_kumo_minus_published": paired(
+                y, p["equine_stack_kumo"], p["equine_stack"]
+            ),
+            "equine_kumo_minus_close": paired(y, p["equine_stack_kumo"], p["close"]),
+        }
+        out.append(row)
+        print(json.dumps(row), flush=True)
+    (ROOT / "docs/results/kumo_tabular_stack.json").write_text(
+        json.dumps(out, indent=1) + "\n"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("step", choices=["export", "infer", "score"])
+    parser.add_argument("step", choices=["export", "infer", "score", "stack"])
     parser.add_argument("--smoke", action="store_true", help="infer on a small slice")
     parser.add_argument(
         "--models",
@@ -374,11 +462,21 @@ def main() -> None:
         help="infer: labeled seasons each model reads (in-context cost grows with the"
         " square of the rows; EQUINE fit on the last five seasons matched all of them)",
     )
+    parser.add_argument("--seasons", type=int, nargs="+", default=list(SEASONS))
+    parser.add_argument("--settings", default="no_line,with_line")
     args = parser.parse_args()
     if args.step == "export":
         export()
     elif args.step == "infer":
-        infer(args.smoke, args.models.split(","), args.context_seasons)
+        infer(
+            args.smoke,
+            args.models.split(","),
+            args.context_seasons,
+            tuple(args.seasons),
+            tuple(args.settings.split(",")),
+        )
+    elif args.step == "stack":
+        stack()
     else:
         score()
 
