@@ -1,0 +1,416 @@
+[
+ {
+  "season": 2024,
+  "setting": "no_line",
+  "n": 1319,
+  "metrics": {
+   "equine_no_line": {
+    "accuracy": 0.6611,
+    "log_loss": 0.6068,
+    "brier": 0.2097,
+    "ece": 0.0289
+   },
+   "logistic": {
+    "accuracy": 0.6566,
+    "log_loss": 0.6044,
+    "brier": 0.2088,
+    "ece": 0.0262
+   },
+   "kumo_relational": {
+    "accuracy": 0.6459,
+    "log_loss": 0.6225,
+    "brier": 0.2166,
+    "ece": 0.0237
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6573,
+    "log_loss": 0.6061,
+    "brier": 0.2098,
+    "ece": 0.0253
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6649,
+    "log_loss": 0.604,
+    "brier": 0.209,
+    "ece": 0.0404
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_no_line": [
+    0.00696,
+    0.00327,
+    0.01082
+   ],
+   "kumo_relational_minus_logistic": [
+    0.0078,
+    0.00391,
+    0.01191
+   ],
+   "kumo_tabular_minus_equine_no_line": [
+    9e-05,
+    -0.00164,
+    0.00183
+   ],
+   "kumo_tabular_minus_logistic": [
+    0.00093,
+    -0.00079,
+    0.00274
+   ],
+   "tabicl_v2_minus_equine_no_line": [
+    -0.00072,
+    -0.00279,
+    0.00123
+   ],
+   "tabicl_v2_minus_logistic": [
+    0.00012,
+    -0.00161,
+    0.00186
+   ]
+  }
+ },
+ {
+  "season": 2024,
+  "setting": "with_line",
+  "n": 1319,
+  "metrics": {
+   "equine_stack": {
+    "accuracy": 0.6869,
+    "log_loss": 0.585,
+    "brier": 0.2,
+    "ece": 0.0451
+   },
+   "p_close": {
+    "accuracy": 0.6892,
+    "log_loss": 0.5831,
+    "brier": 0.1993,
+    "ece": 0.0305
+   },
+   "kumo_relational": {
+    "accuracy": 0.6657,
+    "log_loss": 0.6058,
+    "brier": 0.2093,
+    "ece": 0.0285
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6907,
+    "log_loss": 0.5841,
+    "brier": 0.1996,
+    "ece": 0.0346
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6831,
+    "log_loss": 0.5844,
+    "brier": 0.2,
+    "ece": 0.0251
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_stack": [
+    0.00937,
+    0.00586,
+    0.01277
+   ],
+   "kumo_relational_minus_p_close": [
+    0.01001,
+    0.00623,
+    0.01392
+   ],
+   "kumo_tabular_minus_equine_stack": [
+    -0.00031,
+    -0.00072,
+    0.0001
+   ],
+   "kumo_tabular_minus_p_close": [
+    0.00033,
+    -0.00087,
+    0.00137
+   ],
+   "tabicl_v2_minus_equine_stack": [
+    3e-05,
+    -0.00137,
+    0.0015
+   ],
+   "tabicl_v2_minus_p_close": [
+    0.00067,
+    -0.00069,
+    0.00198
+   ]
+  }
+ },
+ {
+  "season": 2025,
+  "setting": "no_line",
+  "n": 1321,
+  "metrics": {
+   "equine_no_line": {
+    "accuracy": 0.6752,
+    "log_loss": 0.5992,
+    "brier": 0.2067,
+    "ece": 0.0306
+   },
+   "logistic": {
+    "accuracy": 0.6798,
+    "log_loss": 0.5987,
+    "brier": 0.2066,
+    "ece": 0.0328
+   },
+   "kumo_relational": {
+    "accuracy": 0.6669,
+    "log_loss": 0.6118,
+    "brier": 0.2115,
+    "ece": 0.0276
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6813,
+    "log_loss": 0.5976,
+    "brier": 0.206,
+    "ece": 0.0331
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6866,
+    "log_loss": 0.598,
+    "brier": 0.2062,
+    "ece": 0.0287
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_no_line": [
+    0.00479,
+    0.00159,
+    0.0081
+   ],
+   "kumo_relational_minus_logistic": [
+    0.00494,
+    0.00146,
+    0.00834
+   ],
+   "kumo_tabular_minus_equine_no_line": [
+    -0.00076,
+    -0.00261,
+    0.00086
+   ],
+   "kumo_tabular_minus_logistic": [
+    -0.0006,
+    -0.00189,
+    0.00072
+   ],
+   "tabicl_v2_minus_equine_no_line": [
+    -0.00049,
+    -0.0024,
+    0.00138
+   ],
+   "tabicl_v2_minus_logistic": [
+    -0.00033,
+    -0.00197,
+    0.00125
+   ]
+  }
+ },
+ {
+  "season": 2025,
+  "setting": "with_line",
+  "n": 1321,
+  "metrics": {
+   "equine_stack": {
+    "accuracy": 0.6964,
+    "log_loss": 0.5861,
+    "brier": 0.2013,
+    "ece": 0.0447
+   },
+   "p_close": {
+    "accuracy": 0.6934,
+    "log_loss": 0.5856,
+    "brier": 0.2012,
+    "ece": 0.033
+   },
+   "kumo_relational": {
+    "accuracy": 0.6752,
+    "log_loss": 0.5987,
+    "brier": 0.2064,
+    "ece": 0.0275
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6896,
+    "log_loss": 0.5851,
+    "brier": 0.2009,
+    "ece": 0.0198
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6904,
+    "log_loss": 0.5854,
+    "brier": 0.2012,
+    "ece": 0.0363
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_stack": [
+    0.0051,
+    0.00099,
+    0.00886
+   ],
+   "kumo_relational_minus_p_close": [
+    0.00513,
+    0.00084,
+    0.00899
+   ],
+   "kumo_tabular_minus_equine_stack": [
+    -0.00035,
+    -0.00125,
+    0.00057
+   ],
+   "kumo_tabular_minus_p_close": [
+    -0.00032,
+    -0.0013,
+    0.00064
+   ],
+   "tabicl_v2_minus_equine_stack": [
+    -0.0001,
+    -0.00156,
+    0.00144
+   ],
+   "tabicl_v2_minus_p_close": [
+    -7e-05,
+    -0.00151,
+    0.00135
+   ]
+  }
+ },
+ {
+  "season": 2026,
+  "setting": "no_line",
+  "n": 1322,
+  "metrics": {
+   "equine_no_line": {
+    "accuracy": 0.6853,
+    "log_loss": 0.5968,
+    "brier": 0.2054,
+    "ece": 0.0259
+   },
+   "logistic": {
+    "accuracy": 0.6815,
+    "log_loss": 0.5939,
+    "brier": 0.2042,
+    "ece": 0.0205
+   },
+   "kumo_relational": {
+    "accuracy": 0.6793,
+    "log_loss": 0.6036,
+    "brier": 0.208,
+    "ece": 0.0369
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6899,
+    "log_loss": 0.5933,
+    "brier": 0.2039,
+    "ece": 0.02
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6884,
+    "log_loss": 0.5943,
+    "brier": 0.204,
+    "ece": 0.0261
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_no_line": [
+    0.00261,
+    -0.00112,
+    0.0064
+   ],
+   "kumo_relational_minus_logistic": [
+    0.0038,
+    8e-05,
+    0.0074
+   ],
+   "kumo_tabular_minus_equine_no_line": [
+    -0.00153,
+    -0.00403,
+    0.00104
+   ],
+   "kumo_tabular_minus_logistic": [
+    -0.00035,
+    -0.00214,
+    0.00146
+   ],
+   "tabicl_v2_minus_equine_no_line": [
+    -0.00147,
+    -0.00448,
+    0.00156
+   ],
+   "tabicl_v2_minus_logistic": [
+    -0.00029,
+    -0.00242,
+    0.00193
+   ]
+  }
+ },
+ {
+  "season": 2026,
+  "setting": "with_line",
+  "n": 1322,
+  "metrics": {
+   "equine_stack": {
+    "accuracy": 0.6846,
+    "log_loss": 0.5775,
+    "brier": 0.1977,
+    "ece": 0.0334
+   },
+   "p_close": {
+    "accuracy": 0.6853,
+    "log_loss": 0.5759,
+    "brier": 0.1974,
+    "ece": 0.0252
+   },
+   "kumo_relational": {
+    "accuracy": 0.68,
+    "log_loss": 0.5969,
+    "brier": 0.2054,
+    "ece": 0.0301
+   },
+   "kumo_tabular": {
+    "accuracy": 0.6876,
+    "log_loss": 0.5765,
+    "brier": 0.1976,
+    "ece": 0.023
+   },
+   "tabicl_v2": {
+    "accuracy": 0.6921,
+    "log_loss": 0.5796,
+    "brier": 0.1988,
+    "ece": 0.0318
+   }
+  },
+  "vs": {
+   "kumo_relational_minus_equine_stack": [
+    0.00778,
+    0.00317,
+    0.01242
+   ],
+   "kumo_relational_minus_p_close": [
+    0.00806,
+    0.00359,
+    0.01279
+   ],
+   "kumo_tabular_minus_equine_stack": [
+    -7e-05,
+    -0.00078,
+    0.00074
+   ],
+   "kumo_tabular_minus_p_close": [
+    0.00021,
+    -0.00074,
+    0.00119
+   ],
+   "tabicl_v2_minus_equine_stack": [
+    0.0011,
+    -0.00067,
+    0.003
+   ],
+   "tabicl_v2_minus_p_close": [
+    0.00138,
+    -0.00041,
+    0.00317
+   ]
+  }
+ }
+]
