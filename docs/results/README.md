@@ -264,6 +264,47 @@ Brier unchanged to 0.0001, EQUINE head with it +0.0002, -0.0002, +0.0013
 against the published one (no interval excluding zero). Like every input so
 far, it holds nothing the closing line has not priced. Not deployed.
 
+## Liquid AI d1-2B (LFM3) against EQUINE
+
+`scripts/lfm3_d1.py`, results in `lfm3_d1.json`. d1-2B is the decision model
+of Liquid AI's LFM3 release (October 2026; LFM Open License v1.0, which
+allows commercial use below $10M annual revenue): it reads a state and
+answers yes/no questions in one forward pass with a probability Liquid AI
+calibrated on its own data. Zero-shot, revision 10e7671, float16 on the M1's
+GPU (1.1 s a game). Each game's state is the same 28 pre-game features EQUINE
+reads, under descriptive names (`net_rating_last_30_games_home_minus_away`),
+with no team names, dates or ids, since LFM3's pretraining text can include
+these seasons' results; the question is whether the home team wins. "With
+the line" adds the closing line's home win probability to the state.
+"Recalibrated" refits the answer's log-odds (slope and intercept) on the
+season before. Brier:
+
+| | 2023-24 | 2024-25 | 2025-26 |
+|---|---|---|---|
+| EQUINE, no line | 0.2097 | 0.2067 | 0.2054 |
+| d1-2B, no line | 0.2454 | 0.2395 | 0.2387 |
+| d1-2B, no line, recalibrated | 0.2271 | 0.2199 | 0.2175 |
+| EQUINE with the line (published) | 0.2000 | 0.2013 | 0.1977 |
+| Closing line | 0.1993 | 0.2012 | 0.1974 |
+| d1-2B with the line | 0.2210 | 0.2186 | 0.2181 |
+| d1-2B with the line, recalibrated | 0.2115 | 0.2064 | 0.2048 |
+
+Worse than EQUINE in all twelve rows, every interval excluding zero
+(recalibrated, no line: +0.017, +0.013, +0.012). Its answers follow the
+strength gap (correlation 0.76-0.80 with EQUINE, 0.73-0.74 with the Elo
+difference) but lean to the away team (mean 0.42-0.43 for the home team,
+which won 55%) and are overconfident (recalibration slope 0.44-0.68). Given the
+line, it does not defer to it: worse than the line by 0.017-0.022 raw and
+0.005-0.012 recalibrated. Its no-line answer as an input next to the line
+(logistic, fit on the d1 seasons before): weight -0.04 to +0.01, Brier
+change under 0.0001 in each season. With team names and dates added
+(2023-24, no line) it is worse, not better (+0.009, interval excluding
+zero), so it shows no recall of these results. Not deployed.
+
+d1 is built to read text, so the closer fit is the "text model" candidate
+below: injury notes and news, which `text_log` has recorded since
+2026-10-28 and which need a season of logs before they can be tested.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
