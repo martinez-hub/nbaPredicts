@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "fix/protonet-label-order",
- "commit": "d939fca75a9f494ac11888dd889b604abefea97e",
+ "branch": "ci/pyright",
+ "commit": "3a903808eab80d17ca61c68d2ab3d81342e979a1",
  "prs": [
   236,
   237,
@@ -25,10 +25,18 @@
   267,
   268,
   269,
-  270
+  270,
+  271,
+  272,
+  273,
+  274,
+  275,
+  276,
+  277,
+  278
  ],
  "outside_stack": [
   255
  ],
- "resolved_at": "2026-10-28T16:18:43Z"
+ "resolved_at": "2026-10-29T16:26:48Z"
 }
