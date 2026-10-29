@@ -289,7 +289,7 @@ season before. Brier:
 | d1-2B with the line | 0.2210 | 0.2186 | 0.2181 |
 | d1-2B with the line, recalibrated | 0.2115 | 0.2064 | 0.2048 |
 
-Worse than EQUINE in all twelve rows, every interval excluding zero
+Worse than EQUINE in all twelve season-and-setting comparisons, every interval excluding zero
 (recalibrated, no line: +0.017, +0.013, +0.012). Its answers follow the
 strength gap (correlation 0.76-0.80 with EQUINE, 0.73-0.74 with the Elo
 difference) but lean to the away team (mean 0.42-0.43 for the home team,
