@@ -199,6 +199,35 @@ least 256, Kumo still trails TimesFM alone by 0.04-0.13. Its head was trained
 to forecast 72 steps of smooth sensor and energy series from about 3 million
 points, and per-game box-score counts are neither. TimesFM stays.
 
+As an extra input next to TimesFM (`kumo_compare.py stack`): least squares
+of the actual on TimesFM and Kumo, fit on 2025-26 games before Feb 1 and
+scored on the rest, against the same fit on TimesFM alone. Kumo changed the
+mean absolute error by +0.010 for team points (worse; interval +0.001 to
++0.021), -0.005 for player points, +0.004 rebounds, +0.002 assists (none
+excluding zero) and -0.006 threes (-0.009 to -0.002). It reads the same
+history TimesFM does, so it has little to add, and a forecast made further
+ahead from that history has less; it is not wired in.
+
+Two refinements, so the comparison is not of an untuned Kumo:
+
+- Weights that follow each model's error (`kumo_compare.py adaptive`): each
+  game day the combination is re-fit on the previous 600 team-game (300
+  player-game) forecasts, either by least squares or by inverse squared
+  recent error. Against TimesFM alone, team points: -0.012 (interval -0.07
+  to +0.05) and +0.20 (worse); player stats: least squares +0.03 to +0.06
+  (worse, the recent-window refit itself hurts), inverse error -0.005 to
+  +0.013 (assists and threes worse, intervals excluding zero).
+- Kumo retrained on NBA data (`kumo_finetune.py`): its MOMENT encoder stays
+  frozen and its next-game output is retrained on the same windows as
+  TimesFM's fine-tune (8,000 from team and player series in the three
+  seasons before 2025-26, 15% held out, best epoch kept: held-out error 4.054
+  to 4.035). On 2025-26 it improves on released Kumo but still trails:
+  team points 10.51 (TimesFM alone 10.37, with covariates 9.79), player
+  points 4.67 (4.57), rebounds 1.89 (1.87), assists 1.36 (1.34), threes 0.89
+  (0.87); every gap to TimesFM alone excludes zero except rebounds (+0.018,
+  -0.004 to +0.038). TimesFM's own fine-tuned head, on the same rows: 9.75,
+  4.57, 1.85, 1.33, 0.87.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is

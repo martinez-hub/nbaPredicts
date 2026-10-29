@@ -1,0 +1,82 @@
+{
+ "team_points": {
+  "n": 2020,
+  "mae_timesfm": 9.8608,
+  "mae_stack": 9.8489,
+  "stack_minus_timesfm": [
+   -0.0119,
+   -0.072,
+   0.0468
+  ],
+  "mae_inv_error": 10.0654,
+  "inv_error_minus_timesfm": [
+   0.2046,
+   0.1019,
+   0.3055
+  ]
+ },
+ "pts": {
+  "n": 2692,
+  "mae_timesfm": 4.5343,
+  "mae_stack": 4.5917,
+  "stack_minus_timesfm": [
+   0.0574,
+   0.0167,
+   0.0963
+  ],
+  "mae_inv_error": 4.5292,
+  "inv_error_minus_timesfm": [
+   -0.0051,
+   -0.0363,
+   0.027
+  ]
+ },
+ "reb": {
+  "n": 2692,
+  "mae_timesfm": 1.861,
+  "mae_stack": 1.8895,
+  "stack_minus_timesfm": [
+   0.0285,
+   0.0112,
+   0.045
+  ],
+  "mae_inv_error": 1.8685,
+  "inv_error_minus_timesfm": [
+   0.0075,
+   -0.0057,
+   0.0202
+  ]
+ },
+ "ast": {
+  "n": 2692,
+  "mae_timesfm": 1.314,
+  "mae_stack": 1.3527,
+  "stack_minus_timesfm": [
+   0.0387,
+   0.0259,
+   0.0517
+  ],
+  "mae_inv_error": 1.3266,
+  "inv_error_minus_timesfm": [
+   0.0125,
+   0.0027,
+   0.0228
+  ]
+ },
+ "fg3m": {
+  "n": 2692,
+  "mae_timesfm": 0.8731,
+  "mae_stack": 0.9309,
+  "stack_minus_timesfm": [
+   0.0578,
+   0.0472,
+   0.0675
+  ],
+  "mae_inv_error": 0.8827,
+  "inv_error_minus_timesfm": [
+   0.0096,
+   0.0025,
+   0.0164
+  ]
+ }
+}
