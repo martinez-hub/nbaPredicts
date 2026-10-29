@@ -119,6 +119,51 @@ def export() -> None:
     print(json.dumps({"team_rows": len(team), "player_rows": len(players)}))
 
 
+def export_train(windows: int = 8000) -> None:
+    """NBA windows for fine-tuning Kumo's head, all before 2025-26.
+
+    The same series, three-year range and player thinning as TimesFM's
+    fine-tune (``finetune.training_series``); window ends drawn uniformly.
+    """
+    from nbapredicts.finetune import training_series
+    from nbapredicts.forecast import player_frame, team_frame
+
+    store = Store(ROOT / "data")
+    games, tb, pb = (
+        store.load("games"),
+        store.load("team_box"),
+        store.load("player_box"),
+    )
+    pv = player_values(pb, games)
+    tf = team_frame(team_state(games, tb, pv, []))
+    pf = player_frame(pv, tf)
+    cutoff = tf.loc[tf["season"] == SEASON, "start"].min()
+    series, ends, _ = training_series(
+        tf, pf, cutoff, cutoff - pd.Timedelta(days=3 * 365)
+    )
+    pairs = [(i, int(e)) for i, es in enumerate(ends) for e in es]
+    rng = np.random.default_rng(0)
+    pick = rng.choice(len(pairs), size=min(windows, len(pairs)), replace=False)
+    ctx, mask, target, team = [], [], [], []
+    n_team = sum(1 for _ in tf[tf["final"]].groupby("team_id"))
+    for k in pick:
+        i, e = pairs[k]
+        c, m = window(series[i][:e])
+        ctx.append(c)
+        mask.append(m)
+        target.append(series[i][e])
+        team.append(i < n_team)
+    WORK.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        WORK / "train_windows.npz",
+        ctx=np.stack(ctx),
+        mask=np.stack(mask),
+        target=np.asarray(target, np.float32),
+        team=np.asarray(team),
+    )
+    print(json.dumps({"windows": len(pick), "team_windows": int(np.sum(team))}))
+
+
 def paired_abs(y, a, b, n=2000):
     """Mean |a - y| - |b - y| and its bootstrap 95% interval."""
     d = np.abs(a - y) - np.abs(b - y)
@@ -199,12 +244,107 @@ def score() -> None:
     print(json.dumps(result, indent=1))
 
 
+def stack() -> None:
+    """Does Kumo's forecast add anything next to TimesFM's, as an input?
+
+    Fit actual ~ TimesFM + Kumo by least squares on the games before
+    2026-02-01 and score the later ones, against the same fit with TimesFM
+    alone (so a recalibration of TimesFM does not count as Kumo's gain).
+    """
+    from nbapredicts.forecast import PLAYER_STATS
+
+    preds = np.load(WORK / "kumo_preds.npz")
+    games = Store(ROOT / "data").load("games").set_index("game_id")
+    team = pd.read_csv(WORK / "team_rows.csv", dtype={"game_id": str, "team_id": str})
+    players = pd.read_csv(WORK / "player_rows.csv", dtype={"game_id": str})
+    team["kumo"] = preds["team_own_scale"]
+    players["kumo"] = preds["player_own_scale"]
+    cut = pd.Timestamp("2026-02-01", tz="UTC")
+    out = {}
+    parts = [("team_points", team)] + [
+        (s, players[players["stat"] == s]) for s in PLAYER_STATS
+    ]
+    for name, rows in parts:
+        late = (games["start"].reindex(rows["game_id"]) >= cut).to_numpy()
+        y = rows["actual"].to_numpy()
+        res = {"n_fit": int((~late).sum()), "n_test": int(late.sum())}
+        fits = {}
+        for tag, cols in (
+            ("timesfm", ["tfm_xreg"]),
+            ("timesfm_kumo", ["tfm_xreg", "kumo"]),
+        ):
+            x = np.column_stack([np.ones(len(rows)), rows[cols].to_numpy()])
+            coef = np.linalg.lstsq(x[~late], y[~late], rcond=None)[0]
+            fits[tag] = x[late] @ coef
+            res[f"coef_{tag}"] = coef.round(3).tolist()
+            res[f"mae_{tag}"] = round(float(np.abs(fits[tag] - y[late]).mean()), 4)
+        res["kumo_added"] = paired_abs(y[late], fits["timesfm_kumo"], fits["timesfm"])
+        out[name] = res
+    (ROOT / "docs/results/kumo_stack.json").write_text(json.dumps(out, indent=1) + "\n")
+    print(json.dumps(out, indent=1))
+
+
+def adaptive() -> None:
+    """TimesFM and Kumo combined with weights re-fit every day.
+
+    Each game day, from the previous ``window`` forecasts only: (a) least
+    squares of the actual on TimesFM and Kumo, (b) inverse-squared-error
+    weights from each model's recent mean absolute error, against TimesFM
+    alone; so Kumo counts for as much as it has recently earned.
+    """
+    from nbapredicts.forecast import PLAYER_STATS
+
+    preds = np.load(WORK / "kumo_preds.npz")
+    games = Store(ROOT / "data").load("games").set_index("game_id")
+    team = pd.read_csv(WORK / "team_rows.csv", dtype={"game_id": str})
+    players = pd.read_csv(WORK / "player_rows.csv", dtype={"game_id": str})
+    team["kumo"], players["kumo"] = preds["team_own_scale"], preds["player_own_scale"]
+    parts = [("team_points", team)] + [
+        (s, players[players["stat"] == s]) for s in PLAYER_STATS
+    ]
+    out = {}
+    for name, rows in parts:
+        rows = rows.assign(start=games["start"].reindex(rows["game_id"]).to_numpy())
+        rows = rows.sort_values("start").reset_index(drop=True)
+        day = rows["start"].dt.tz_convert("America/New_York").dt.date.to_numpy()
+        y, f1, f2 = (rows[c].to_numpy() for c in ("actual", "tfm_xreg", "kumo"))
+        window = 600 if name == "team_points" else 300
+        res = {k: np.full(len(rows), np.nan) for k in ("stack", "inv_error")}
+        for d in np.unique(day):
+            now, past = day == d, np.flatnonzero(day < d)[-window:]
+            if len(past) < window:
+                continue
+            x = np.column_stack([np.ones(len(past)), f1[past], f2[past]])
+            b = np.linalg.lstsq(x, y[past], rcond=None)[0]
+            res["stack"][now] = b[0] + b[1] * f1[now] + b[2] * f2[now]
+            w1 = 1 / np.abs(f1[past] - y[past]).mean() ** 2
+            w2 = 1 / np.abs(f2[past] - y[past]).mean() ** 2
+            res["inv_error"][now] = (w1 * f1[now] + w2 * f2[now]) / (w1 + w2)
+        ok = ~np.isnan(res["stack"])
+        r = {
+            "n": int(ok.sum()),
+            "mae_timesfm": round(float(np.abs(f1[ok] - y[ok]).mean()), 4),
+        }
+        for k, v in res.items():
+            r[f"mae_{k}"] = round(float(np.abs(v[ok] - y[ok]).mean()), 4)
+            r[f"{k}_minus_timesfm"] = paired_abs(y[ok], v[ok], f1[ok])
+        out[name] = r
+    (ROOT / "docs/results/kumo_adaptive.json").write_text(
+        json.dumps(out, indent=1) + "\n"
+    )
+    print(json.dumps(out, indent=1))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("step", choices=["export", "score"])
+    parser.add_argument(
+        "step", choices=["export", "export-train", "score", "stack", "adaptive"]
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    export() if args.step == "export" else score()
+    steps = {"export": export, "export-train": export_train, "score": score}
+    steps["stack"], steps["adaptive"] = stack, adaptive
+    steps[args.step]()
 
 
 if __name__ == "__main__":
