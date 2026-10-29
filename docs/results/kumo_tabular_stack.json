@@ -1,0 +1,116 @@
+[
+ {
+  "season": 2024,
+  "n": 1319,
+  "train_games": 8846,
+  "brier": {
+   "logistic_stack": 0.19978,
+   "logistic_stack_kumo": 0.19982,
+   "equine_stack_kumo": 0.20015,
+   "equine_stack": 0.19995,
+   "close": 0.19931
+  },
+  "weights": {
+   "logistic_stack": [
+    0.92,
+    -0.084
+   ],
+   "logistic_stack_kumo": [
+    0.915,
+    -0.117,
+    0.039
+   ]
+  },
+  "kumo_added_logistic": [
+   3e-05,
+   -3e-05,
+   0.0001
+  ],
+  "equine_kumo_minus_published": [
+   0.0002,
+   -0.00073,
+   0.0011
+  ],
+  "equine_kumo_minus_close": [
+   0.00084,
+   -0.0003,
+   0.00202
+  ]
+ },
+ {
+  "season": 2025,
+  "n": 1321,
+  "train_games": 10165,
+  "brier": {
+   "logistic_stack": 0.20107,
+   "logistic_stack_kumo": 0.20107,
+   "equine_stack_kumo": 0.20109,
+   "equine_stack": 0.20127,
+   "close": 0.20124
+  },
+  "weights": {
+   "logistic_stack": [
+    0.944,
+    -0.088
+   ],
+   "logistic_stack_kumo": [
+    0.941,
+    -0.105,
+    0.021
+   ]
+  },
+  "kumo_added_logistic": [
+   -0.0,
+   -3e-05,
+   3e-05
+  ],
+  "equine_kumo_minus_published": [
+   -0.00018,
+   -0.00084,
+   0.00042
+  ],
+  "equine_kumo_minus_close": [
+   -0.00015,
+   -0.00139,
+   0.00108
+  ]
+ },
+ {
+  "season": 2026,
+  "n": 1322,
+  "train_games": 11486,
+  "brier": {
+   "logistic_stack": 0.19729,
+   "logistic_stack_kumo": 0.19729,
+   "equine_stack_kumo": 0.19894,
+   "equine_stack": 0.19766,
+   "close": 0.19738
+  },
+  "weights": {
+   "logistic_stack": [
+    0.929,
+    -0.055
+   ],
+   "logistic_stack_kumo": [
+    0.93,
+    -0.037,
+    -0.02
+   ]
+  },
+  "kumo_added_logistic": [
+   0.0,
+   -2e-05,
+   3e-05
+  ],
+  "equine_kumo_minus_published": [
+   0.00128,
+   -7e-05,
+   0.00263
+  ],
+  "equine_kumo_minus_close": [
+   0.00156,
+   -0.00012,
+   0.0032
+  ]
+ }
+]

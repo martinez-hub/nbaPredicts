@@ -228,6 +228,42 @@ Two refinements, so the comparison is not of an untuned Kumo:
   -0.004 to +0.038). TimesFM's own fine-tuned head, on the same rows: 9.75,
   4.57, 1.85, 1.33, 0.87.
 
+## NVIDIA Kumo Tabular, TabICLv2 and Kumo Relational against EQUINE
+
+`scripts/kumo_tabular.py`. In-context learners from NVIDIA's
+structured-data-models 0.2.1 (Kumo weights OpenMDW-1.1): they read labeled
+games and predict new ones without training. Same pre-game inputs and test
+games as EQUINE, each test season predicted from the four seasons before it
+(the in-context cost grows with the square of the rows; EQUINE trained on
+the last five seasons matched training on all of them, see above), eight
+estimators, Apple GPU. Kumo Relational also reads one row per player on each
+roster (pre-game form, plus-minus rating, projected minutes, chance of
+playing) instead of the summed roster features. Brier:
+
+| | 2023-24 | 2024-25 | 2025-26 |
+|---|---|---|---|
+| EQUINE, no line | 0.2097 | 0.2067 | 0.2054 |
+| Kumo Tabular, no line | 0.2098 | 0.2060 | 0.2039 |
+| TabICLv2, no line | 0.2090 | 0.2062 | 0.2040 |
+| Kumo Relational, no line | 0.2166 | 0.2115 | 0.2080 |
+| EQUINE with the line (published) | 0.2000 | 0.2013 | 0.1977 |
+| Closing line | 0.1993 | 0.2012 | 0.1974 |
+| Kumo Tabular with the line | 0.1996 | 0.2009 | 0.1976 |
+| TabICLv2 with the line | 0.2000 | 0.2012 | 0.1988 |
+| Kumo Relational with the line | 0.2093 | 0.2064 | 0.2054 |
+
+Kumo Tabular and TabICLv2 match EQUINE: every difference from it is inside
+its interval (Kumo Tabular minus EQUINE without the line +0.0001, -0.0008,
+-0.0015; with it -0.0003, -0.0004, -0.0001). Kumo Relational is worse in all
+six (intervals exclude zero in five): reading players itself does worse than
+the hand-built availability and impact features.
+
+As a third stack input next to the line and stage 1 (Kumo Tabular's
+walk-forward predictions from 2016-17 on): weight 0.02-0.04, logistic-stack
+Brier unchanged to 0.0001, EQUINE head with it +0.0002, -0.0002, +0.0013
+against the published one (no interval excluding zero). Like every input so
+far, it holds nothing the closing line has not priced. Not deployed.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
