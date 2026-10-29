@@ -1,0 +1,309 @@
+{
+ "season": 2026,
+ "kumo": {
+  "checkpoint": "run8_best_model_cr.pt",
+  "backbone": "AutonLab/MOMENT-1-large",
+  "device": "mps",
+  "standardizer_mean": [
+   -5.671199798583984
+  ],
+  "standardizer_std": [
+   8.693300247192383
+  ],
+  "standardizer_size": 1
+ },
+ "team_points": {
+  "n": 2636,
+  "mae_tfm_xreg": 9.7863,
+  "mae_tfm_plain": 10.3737,
+  "mae_baseline": 10.3457,
+  "mae_kumo_released": 10.7249,
+  "mae_kumo_own_scale": 10.7249,
+  "kumo_released_minus_tfm_xreg": [
+   0.9386,
+   0.7534,
+   1.1202
+  ],
+  "kumo_released_minus_tfm_plain": [
+   0.3513,
+   0.2051,
+   0.4881
+  ],
+  "kumo_own_scale_minus_tfm_xreg": [
+   0.9386,
+   0.7548,
+   1.1218
+  ],
+  "kumo_own_scale_minus_tfm_plain": [
+   0.3513,
+   0.2153,
+   0.4802
+  ]
+ },
+ "game_total": {
+  "n": 1318,
+  "mae_tfm_xreg": 15.3782,
+  "mae_tfm_plain": 16.0793,
+  "mae_baseline": 16.1012,
+  "mae_kumo_released": 16.4779,
+  "mae_kumo_own_scale": 16.4779,
+  "kumo_released_minus_tfm_xreg": [
+   1.0997,
+   0.7003,
+   1.4924
+  ],
+  "kumo_released_minus_tfm_plain": [
+   0.3986,
+   0.0998,
+   0.6908
+  ],
+  "kumo_own_scale_minus_tfm_xreg": [
+   1.0997,
+   0.7007,
+   1.5055
+  ],
+  "kumo_own_scale_minus_tfm_plain": [
+   0.3986,
+   0.1065,
+   0.7011
+  ]
+ },
+ "winner_accuracy": {
+  "tfm_xreg": 0.6442,
+  "tfm_plain": 0.5721,
+  "baseline": 0.5789,
+  "kumo_released": 0.5607,
+  "kumo_own_scale": 0.5607
+ },
+ "players": {
+  "pts": {
+   "n": 3000,
+   "mae_tfm_xreg": 4.5589,
+   "mae_tfm_plain": 4.566,
+   "mae_baseline": 4.5782,
+   "mae_kumo_released": 5.4262,
+   "mae_kumo_own_scale": 4.6622,
+   "kumo_released_minus_tfm_xreg": [
+    0.8674,
+    0.7456,
+    0.9984
+   ],
+   "kumo_released_minus_tfm_plain": [
+    0.8602,
+    0.728,
+    0.9869
+   ],
+   "kumo_own_scale_minus_tfm_xreg": [
+    0.1033,
+    0.0414,
+    0.1609
+   ],
+   "kumo_own_scale_minus_tfm_plain": [
+    0.0962,
+    0.0368,
+    0.1549
+   ],
+   "n_context_256_plus": 1512,
+   "context_256_plus": {
+    "n": 1512,
+    "mae_tfm_xreg": 4.7856,
+    "mae_tfm_plain": 4.7978,
+    "mae_baseline": 4.8469,
+    "mae_kumo_released": 5.0302,
+    "mae_kumo_own_scale": 4.928,
+    "kumo_released_minus_tfm_xreg": [
+     0.2446,
+     0.1332,
+     0.3509
+    ],
+    "kumo_released_minus_tfm_plain": [
+     0.2323,
+     0.1175,
+     0.3372
+    ],
+    "kumo_own_scale_minus_tfm_xreg": [
+     0.1424,
+     0.0528,
+     0.2323
+    ],
+    "kumo_own_scale_minus_tfm_plain": [
+     0.1301,
+     0.0413,
+     0.2188
+    ]
+   }
+  },
+  "reb": {
+   "n": 3000,
+   "mae_tfm_xreg": 1.8701,
+   "mae_tfm_plain": 1.8712,
+   "mae_baseline": 1.9089,
+   "mae_kumo_released": 2.4358,
+   "mae_kumo_own_scale": 1.9274,
+   "kumo_released_minus_tfm_xreg": [
+    0.5657,
+    0.5034,
+    0.6275
+   ],
+   "kumo_released_minus_tfm_plain": [
+    0.5646,
+    0.5016,
+    0.625
+   ],
+   "kumo_own_scale_minus_tfm_xreg": [
+    0.0573,
+    0.0314,
+    0.0842
+   ],
+   "kumo_own_scale_minus_tfm_plain": [
+    0.0562,
+    0.0322,
+    0.0807
+   ],
+   "n_context_256_plus": 1512,
+   "context_256_plus": {
+    "n": 1512,
+    "mae_tfm_xreg": 1.8786,
+    "mae_tfm_plain": 1.8824,
+    "mae_baseline": 1.9281,
+    "mae_kumo_released": 2.0256,
+    "mae_kumo_own_scale": 1.944,
+    "kumo_released_minus_tfm_xreg": [
+     0.1471,
+     0.0992,
+     0.1961
+    ],
+    "kumo_released_minus_tfm_plain": [
+     0.1433,
+     0.0923,
+     0.19
+    ],
+    "kumo_own_scale_minus_tfm_xreg": [
+     0.0655,
+     0.0307,
+     0.1018
+    ],
+    "kumo_own_scale_minus_tfm_plain": [
+     0.0616,
+     0.0274,
+     0.097
+    ]
+   }
+  },
+  "ast": {
+   "n": 3000,
+   "mae_tfm_xreg": 1.3316,
+   "mae_tfm_plain": 1.3359,
+   "mae_baseline": 1.3677,
+   "mae_kumo_released": 1.763,
+   "mae_kumo_own_scale": 1.3868,
+   "kumo_released_minus_tfm_xreg": [
+    0.4313,
+    0.385,
+    0.4764
+   ],
+   "kumo_released_minus_tfm_plain": [
+    0.4271,
+    0.3818,
+    0.4756
+   ],
+   "kumo_own_scale_minus_tfm_xreg": [
+    0.0552,
+    0.0362,
+    0.0749
+   ],
+   "kumo_own_scale_minus_tfm_plain": [
+    0.0509,
+    0.031,
+    0.0709
+   ],
+   "n_context_256_plus": 1512,
+   "context_256_plus": {
+    "n": 1512,
+    "mae_tfm_xreg": 1.4057,
+    "mae_tfm_plain": 1.4119,
+    "mae_baseline": 1.4423,
+    "mae_kumo_released": 1.5283,
+    "mae_kumo_own_scale": 1.4705,
+    "kumo_released_minus_tfm_xreg": [
+     0.1226,
+     0.0849,
+     0.1587
+    ],
+    "kumo_released_minus_tfm_plain": [
+     0.1165,
+     0.0789,
+     0.1531
+    ],
+    "kumo_own_scale_minus_tfm_xreg": [
+     0.0648,
+     0.0382,
+     0.0922
+    ],
+    "kumo_own_scale_minus_tfm_plain": [
+     0.0587,
+     0.0327,
+     0.0833
+    ]
+   }
+  },
+  "fg3m": {
+   "n": 3000,
+   "mae_tfm_xreg": 0.8732,
+   "mae_tfm_plain": 0.8704,
+   "mae_baseline": 0.9008,
+   "mae_kumo_released": 1.1757,
+   "mae_kumo_own_scale": 0.9132,
+   "kumo_released_minus_tfm_xreg": [
+    0.3025,
+    0.2685,
+    0.3368
+   ],
+   "kumo_released_minus_tfm_plain": [
+    0.3053,
+    0.2731,
+    0.3396
+   ],
+   "kumo_own_scale_minus_tfm_xreg": [
+    0.04,
+    0.0271,
+    0.0537
+   ],
+   "kumo_own_scale_minus_tfm_plain": [
+    0.0428,
+    0.0295,
+    0.0563
+   ],
+   "n_context_256_plus": 1512,
+   "context_256_plus": {
+    "n": 1512,
+    "mae_tfm_xreg": 0.9517,
+    "mae_tfm_plain": 0.9488,
+    "mae_baseline": 0.9776,
+    "mae_kumo_released": 1.0364,
+    "mae_kumo_own_scale": 0.9921,
+    "kumo_released_minus_tfm_xreg": [
+     0.0847,
+     0.0592,
+     0.1109
+    ],
+    "kumo_released_minus_tfm_plain": [
+     0.0877,
+     0.0633,
+     0.1135
+    ],
+    "kumo_own_scale_minus_tfm_xreg": [
+     0.0403,
+     0.0212,
+     0.0588
+    ],
+    "kumo_own_scale_minus_tfm_plain": [
+     0.0433,
+     0.0244,
+     0.0617
+    ]
+   }
+  }
+ },
+ "players_context_median": 257
+}

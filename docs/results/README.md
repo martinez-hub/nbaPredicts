@@ -168,6 +168,37 @@ closing line, and zero-shot TimesFM. They are flagged `backfilled` in the
 prediction log and marked on the page. Through Oct 27: 37 of 52 right
 (the closing line also 37), plus 3 of 4 published before tip-off.
 
+## NVIDIA Kumo-Forecast against TimesFM
+
+`scripts/kumo_compare.py` and `scripts/kumo_infer.py`. Kumo-Forecast
+(nvidia/Kumo-Forecast, Apache-2.0; formerly NV-Tesseract) is a MOMENT-1-large
+encoder with a forecasting head trained on the Monash archive. It reads a
+512-point window and takes no covariates known before the game. Scored on
+2025-26, one step ahead, on the same rows as the published TimesFM backtest:
+every team's points (2,636) and the 3,000-appearance player sample (seed 0).
+Cross-channel checkpoint, direct mode, Apple GPU. Mean absolute error; the
+last column is Kumo minus TimesFM alone with its bootstrap 95% interval.
+
+| Forecast | TimesFM + XReg (page) | TimesFM alone | Recent average | Kumo | Kumo vs TimesFM alone |
+|---|---|---|---|---|---|
+| Team points | 9.79 | 10.37 | 10.35 | 10.73 | +0.35 (+0.22, +0.48) |
+| Game total | 15.38 | 16.08 | 16.10 | 16.48 | +0.40 (+0.11, +0.70) |
+| Player points | 4.56 | 4.57 | 4.58 | 4.66 | +0.10 (+0.04, +0.15) |
+| Player rebounds | 1.87 | 1.87 | 1.91 | 1.93 | +0.06 (+0.03, +0.08) |
+| Player assists | 1.33 | 1.34 | 1.37 | 1.39 | +0.05 (+0.03, +0.07) |
+| Player threes | 0.87 | 0.87 | 0.90 | 0.91 | +0.04 (+0.03, +0.06) |
+
+Kumo is worse than TimesFM on every row, with or without TimesFM's
+covariates, and worse than the recent average too. Picking the side it gives
+more points gets 56.1% of winners (TimesFM + XReg 64.4%). Player rows use
+Kumo with each window z-scored by its own mean and spread; with the released
+standardizer (one mean and spread, -5.67 and 8.69) player errors are far
+larger (points 5.43), team errors identical. Half the player histories are
+shorter than 256 games and padded (masked); restricted to the 1,512 with at
+least 256, Kumo still trails TimesFM alone by 0.04-0.13. Its head was trained
+to forecast 72 steps of smooth sensor and energy series from about 3 million
+points, and per-game box-score counts are neither. TimesFM stays.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
