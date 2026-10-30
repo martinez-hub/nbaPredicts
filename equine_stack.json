@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "ci/pyright",
- "commit": "3a903808eab80d17ca61c68d2ab3d81342e979a1",
+ "branch": "fix/refuse-one-class-models",
+ "commit": "b0810b67a1e62ebf37416b3761906330019e2c4e",
  "prs": [
   236,
   237,
@@ -33,10 +33,12 @@
   275,
   276,
   277,
-  278
+  278,
+  282,
+  283
  ],
  "outside_stack": [
   255
  ],
- "resolved_at": "2026-10-29T16:26:48Z"
+ "resolved_at": "2026-10-30T16:17:33Z"
 }
