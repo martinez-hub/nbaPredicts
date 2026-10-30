@@ -204,6 +204,13 @@ def test_pregame_availability_uses_the_report_and_not_the_game(league):
     ]
     assert rows.loc[rows["name"] != star, "status"].isna().all()
 
+    # A chance of playing carried by the report replaces the status's.
+    learned = pregame_rosters(pv, games, reason.assign(p_play=0.8), teams)
+    rows = learned[
+        (learned["game_id"] == last["game_id"]) & (learned["team_id"] == team)
+    ]
+    assert rows.loc[rows["name"] == star, "p_play"].tolist() == [0.8]
+
 
 def _letters(athlete_id: str) -> str:
     """'3-0' -> 'Player d a': name matching ignores digits, as real names have none."""

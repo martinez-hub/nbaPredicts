@@ -489,7 +489,8 @@ def pregame_rosters(
     players it does not list, and everyone on days without a report, count
     as available. ``team_ids`` maps the report's full team names to ids.
     ``report_columns`` (such as ``status``, ``reason``) come along from the
-    report row used, empty for players it does not list.
+    report row used, empty for players it does not list. A ``p_play``
+    column in ``reports`` overrides the status's constant where it is set.
     """
     from .injuries import P_PLAY, normalize_name
 
@@ -525,7 +526,10 @@ def pregame_rosters(
     # game date, and when two reports cover a game keep the later one.
     game_day = rep["game_date"] if "game_date" in rep else rep["day"]
     rep["date"] = pd.to_datetime(game_day.fillna(rep["day"])).dt.date
-    rep["p_play"] = rep["status"].str.lower().map(P_PLAY).fillna(1.0)
+    by_status = rep["status"].str.lower().map(P_PLAY).fillna(1.0)
+    # A learned chance of playing, where the reports carry one, replaces the
+    # status's constant.
+    rep["p_play"] = rep["p_play"].fillna(by_status) if "p_play" in rep else by_status
     roster["key"] = roster["name"].map(normalize_name)
     roster["date"] = pd.to_datetime(roster["date"]).dt.date
     if "published" in rep:
