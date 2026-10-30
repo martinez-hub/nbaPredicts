@@ -289,8 +289,9 @@ def update(
     """Stints for every final game with a box score not checked yet.
 
     ``plays_for(game_id)``: the game's compact play-by-play (``fetch_plays``
-    in the daily job). A download that fails leaves no check, so the next
-    run tries again, until the game is ``RETRY_DAYS`` old.
+    in the daily job). A game whose plays do not come (a failed or empty
+    download) gets no check, so the next run tries again, until the game is
+    ``RETRY_DAYS`` old.
     """
     now = now or pd.Timestamp.now(tz="UTC")
     checks = store.load("stint_checks")
@@ -305,12 +306,12 @@ def update(
             game = plays_for(g.game_id)
         except ESPNError as err:
             log.warning("plays for %s failed: %s", g.game_id, err)
-            if now - pd.Timestamp(g.start) < pd.Timedelta(days=RETRY_DAYS):
-                continue
             game = None
         except (KeyError, IndexError, TypeError, StopIteration) as err:
             log.warning("plays for %s unreadable: %s", g.game_id, err)
             game = None
+        if game is None and now - g.start < pd.Timedelta(days=RETRY_DAYS):
+            continue
         final = (int(g.home_pts), int(g.away_pts))
         stints, check = game_stints(game, box_by_game[g.game_id], final)
         new_checks.append(
