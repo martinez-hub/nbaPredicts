@@ -132,7 +132,7 @@ def backfill(
             games,
             injury_reports,
             team_ids,
-            monthly_ratings(player_box, games),
+            monthly_ratings(player_box, games, store.load("stints")),
         ),
     )
     feats = feats.merge(
