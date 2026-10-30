@@ -54,9 +54,32 @@ prediction time, so the open-line model was not deployed.
 
 ## Injury-report history
 
-139,733 rows from 1,618 game days (2018-19 on, Wayback Machine and the NBA
-CDN). Joined to box scores, matched players with each status played: Out
-0.1%, Doubtful 1.4%, Questionable 51%, Probable 82%, Available 85%.
+141,289 rows from 1,612 game days, 2018-19..2025-26 (Wayback Machine and
+the NBA CDN). Players on a team's pre-game roster (in its previous 10 games)
+listed Doubtful logged minutes 2.0% of the time, Questionable 52.6%,
+Probable 90.9% (2019-20..2025-26).
+
+Until 2026-10-30 the parser put most players in reports to 2022-23 under
+the wrong team: those PDFs' text comes out top-down, newer ones bottom-up,
+and it always read bottom-up, so each player took the team named on the
+row below (LaVine and Caruso under Miami, Bulls at Heat). 23-26% of
+2018-19..2022-23 rows had the right team, so about three in four reported
+injuries in those training seasons never reached the availability and
+impact features; 2023-24 on was right (98%). Fixed (each page's order is
+read from where its column header sits; a test on a 2022 report) and
+rebuilt from the cached PDFs: 97-99% right in every season, 2023-24..
+2025-26 files unchanged. Same inputs otherwise, the fix moves the test
+seasons' Brier by:
+
+| | 2023-24 | 2024-25 | 2025-26 | pooled (95% interval) |
+|---|---|---|---|---|
+| EQUINE, no line | -0.0015 | -0.0013 | -0.0010 | -0.0013 (-0.0022, -0.0003) |
+| Logistic | -0.0016 | -0.0011 | -0.0003 | -0.0010 (-0.0017, -0.0003) |
+| EQUINE with the line | +0.0001 | -0.0001 | +0.0001 | +0.00005 (-0.00002, +0.00012) |
+
+The stand-alone models gain; the published stack, which leans on the line,
+does not move. Sections written before the fix keep their numbers: each
+compared its models on the same inputs.
 
 ## Player impact (minutes-weighted plus-minus)
 
@@ -88,13 +111,13 @@ the defaults.
 
 | Season | EQUINE with the line | Closing line | EQUINE, no line | Logistic | Elo |
 |---|---|---|---|---|---|
-| 2023-24 | 68.7% / 0.1999 | 68.9% / 0.1993 | 66.3% / 0.2096 | 65.7% / 0.2089 | 64.4% / 0.2182 |
-| 2024-25 | 69.6% / 0.2013 | 69.3% / 0.2012 | 67.6% / 0.2067 | 68.0% / 0.2066 | 64.7% / 0.2185 |
-| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.7% / 0.2052 | 68.2% / 0.2042 | 67.4% / 0.2110 |
+| 2023-24 | 68.8% / 0.2001 | 68.9% / 0.1993 | 66.0% / 0.2081 | 66.3% / 0.2072 | 64.4% / 0.2182 |
+| 2024-25 | 69.6% / 0.2012 | 69.3% / 0.2012 | 68.5% / 0.2054 | 68.7% / 0.2055 | 64.7% / 0.2185 |
+| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.5% / 0.2045 | 67.8% / 0.2040 | 67.4% / 0.2110 |
 
-(accuracy / Brier). By EQUINE's GP-variance tercile the no-line model picked
-62.9%, 66.9% and 72.8% correctly (most ordinary to rarest), calibration
-error 0.033, 0.030, 0.028. With the current settings, high variance marks
+(accuracy / Brier; rerun 2026-10-30 on the fixed injury history). By
+EQUINE's GP-variance tercile the no-line model picked 62.7%, 65.5% and 74.7%
+correctly (most ordinary to rarest), calibration error 0.016, 0.017, 0.031. With the current settings, high variance marks
 rare, mostly lopsided matchups, which are easier to call; with EquineGP's
 defaults (LayerNorm, mean-field 25) the order had been reversed (75/65/60%).
 
@@ -304,6 +327,37 @@ zero), so it shows no recall of these results. Not deployed.
 d1 is built to read text, so the closer fit is the "text model" candidate
 below: injury notes and news, which `text_log` has recorded since
 2026-10-28 and which need a season of logs before they can be tested.
+
+## d1-2B reading the injury report's reasons
+
+`scripts/injury_text.py`, results in `injury_text.json`. Does the report's
+reason column ("Injury/Illness - Left Ankle; Sprain", "G League - Two-Way"),
+read by d1-2B, say who plays better than the status alone? Rows: rostered
+players listed Questionable, Doubtful or Probable on the last report before
+tip-off, 2019-20 on (12,369; 1,738-1,983 per test season); label: logged
+minutes. Each test season is predicted from the seasons before. d1 sees only
+the status and the reason (2,727 distinct pairs). Brier on those players:
+
+| | 2023-24 | 2024-25 | 2025-26 |
+|---|---|---|---|
+| Current constants (0.03 / 0.5 / 0.9) | 0.1908 | 0.1858 | 0.1805 |
+| Each status's training rate | 0.1897 | 0.1859 | 0.1801 |
+| d1-2B | 0.3176 | 0.3075 | 0.2978 |
+| d1-2B recalibrated within each status | 0.1901 | 0.1859 | 0.1801 |
+| Logistic: status, games missed in a row, back-to-back, projected minutes, form | 0.1751 | 0.1798 | 0.1704 |
+| ... + reason (category, body part, detail) | 0.1769 | 0.1802 | 0.1701 |
+| ... + reason + d1 | 0.1770 | 0.1802 | 0.1700 |
+
+d1 does not read the statuses: its mean answer is 0.27 for Probable (91%
+play), 0.29 for Questionable, 0.32 for Doubtful (2%). Recalibrated within
+each status it ties the status rates (+0.0005, +0.0000, +0.0000), and next
+to the parsed reason it moves Brier by at most 0.0002 (rare reasons
+included). The reason column itself adds nothing (+0.0018, +0.0005,
+-0.0003, no interval excluding zero). What does help is the player's own
+recent pattern: the logistic without the reason beats the status rates by
+0.0146, 0.0061 and 0.0097 (every interval excluding zero), mostly on
+Questionable players (0.249 to 0.230-0.245). Neither d1 nor the reason is
+used.
 
 ## Where this leaves "beating the market"
 
