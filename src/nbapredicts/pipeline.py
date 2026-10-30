@@ -59,6 +59,8 @@ from .impact import (
 from .injuries import combine, official_injuries, record_report
 from .market import fetch_odds
 from .stack import StackedWinner
+from .stints import fetch_plays
+from .stints import update as update_stints
 from .text_log import log_text
 from .winner import WinnerConfig, WinnerModel, fit
 
@@ -359,6 +361,13 @@ def daily(
         log.info("odds: %d games updated", update_odds(store, client, games))
     team_box = store.load("team_box")
     player_box = store.load("player_box")
+    if collect:
+        log.info(
+            "stints: %s",
+            update_stints(
+                store, games, player_box, lambda gid: fetch_plays(client, gid), now
+            ),
+        )
     teams = load_teams(client, store.data_dir / "teams.json")
 
     upcoming = select_upcoming(games, now)
@@ -391,7 +400,7 @@ def daily(
 
     # Minutes-weighted player impact: past games as knowable before tip-off,
     # upcoming games from today's rosters and report.
-    ratings = monthly_ratings(player_box, games)
+    ratings = monthly_ratings(player_box, games, store.load("stints"))
     team_ids = {t["name"]: tid for tid, t in teams.items()}
     feats = apply_impact(
         feats,

@@ -1,10 +1,19 @@
 """Player impact ratings and minutes-weighted team strength.
 
-Ratings are a game-level adjusted plus-minus: each game's home margin is
-modeled as home advantage plus the sum over players of (minutes / 48) x
-rating, home players positive and away players negative, fit by ridge
-regression with older games down-weighted. They are refit at the start of
-every month from games before it, so a game's ratings never saw it.
+Ratings are adjusted plus-minus, the average of two ridge fits with older
+games down-weighted:
+
+- game level: each game's home margin is home advantage plus the sum over
+  players of (minutes / 48) x rating, home players positive and away
+  players negative;
+- stint level: the same for each stint (``stints.py``), the stretches with
+  the same ten players on the floor, weighted by their length; a game whose
+  stints did not pass the box-score check enters as its whole-game row.
+
+Both are in points of margin per 48 minutes on the floor and are refit at
+the start of every month from games before it, so a game's ratings never
+saw it. The average predicted EQUINE's results better than either fit
+alone (docs/results/README.md, "Stint-level RAPM").
 
 Team strength for a game is the expected sum of rating x minutes share over
 the players who suit up: each player's minutes are projected from his recent
@@ -18,14 +27,24 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy import sparse
-from scipy.sparse.linalg import lsqr
+from scipy.linalg import solve
+
+from .collect import LINEUP_COLS
 
 MINUTES_SPAN = 10  # games in the projected-minutes EWM
 TEAM_MINUTES = 240.0
+GAME_RIDGE = 5.0
+STINT_RIDGE = 45.0  # stint rows are many and noisy (chosen on 2016-17..2022-23)
+
+
+def _utc(start: pd.Series) -> np.ndarray:
+    """Tip-off times as naive UTC datetime64, for sorting and searching."""
+    return start.dt.tz_convert("UTC").dt.tz_localize(None).to_numpy("datetime64[ns]")
 
 
 def _design(app: pd.DataFrame, games: pd.DataFrame, players: pd.Index):
-    """Sparse (game x player) matrix of signed minutes/48 and the margins."""
+    """Sparse (game x player) matrix of signed minutes/48, the margins and
+    tip-off times; the last column is home advantage."""
     g = games.reset_index(drop=True)
     row = pd.Series(np.arange(len(g)), index=g["game_id"])
     a = app[app["game_id"].isin(g["game_id"])]
@@ -43,17 +62,87 @@ def _design(app: pd.DataFrame, games: pd.DataFrame, players: pd.Index):
     )
     hca = np.where(g["neutral"].astype(bool), 0.0, 1.0)
     y = (g["home_pts"] - g["away_pts"]).to_numpy(float)
-    return sparse.hstack([x, sparse.csr_matrix(hca[:, None])]).tocsr(), y
+    x = sparse.hstack([x, sparse.csr_matrix(hca[:, None])]).tocsr()
+    return x, y, _utc(g["start"])
+
+
+def _stint_design(stints: pd.DataFrame, games: pd.DataFrame, players: pd.Index):
+    """``_design`` for stints. A stint's margin varies with its length, so
+    each row is weighted by it: x = +-sqrt(minutes/48) per player on the
+    floor and y = margin / sqrt(minutes/48), which keeps the game rows'
+    units."""
+    g = games.set_index("game_id")
+    s = stints[stints["game_id"].isin(g.index)]
+    root = np.sqrt((s["t1"] - s["t0"]).to_numpy(float) / 60 / 48)
+    m = len(s)
+    idx = np.column_stack([players.get_indexer(s[c]) for c in LINEUP_COLS])
+    val = np.column_stack([root] * 5 + [-root] * 5)
+    keep = idx >= 0
+    rows = np.repeat(np.arange(m), len(LINEUP_COLS)).reshape(idx.shape)
+    neutral = g.loc[s["game_id"], "neutral"].astype(bool).to_numpy()
+    x = sparse.csr_matrix(
+        (
+            np.concatenate([val[keep], np.where(neutral, 0.0, root)]),
+            (
+                np.concatenate([rows[keep], np.arange(m)]),
+                np.concatenate([idx[keep], np.full(m, len(players))]),
+            ),
+        ),
+        shape=(m, len(players) + 1),
+    )
+    y = s["margin"].to_numpy(float) / root
+    return x, y, _utc(g.loc[s["game_id"], "start"])
+
+
+def _monthly_fit(
+    x: sparse.csr_matrix,
+    y: np.ndarray,
+    t: np.ndarray,
+    months: pd.DatetimeIndex,
+    ridge: float,
+    half_life_days: float,
+) -> list[np.ndarray]:
+    """Ridge solution as of each month from the rows before it, each row
+    weighted 0.5 ** (age / half-life). The weighted normal equations as of
+    a month are the previous month's decayed by the gap plus the rows in
+    between, so each month costs one solve."""
+    order = np.argsort(t, kind="stable")
+    x, y, t = x[order], y[order], t[order]
+    n = x.shape[1]
+    gram, xty = np.zeros((n, n)), np.zeros(n)
+    out, prev, begin = [], None, 0
+    for month in months:
+        m64 = month.tz_convert("UTC").tz_localize(None).to_datetime64()
+        stop = int(np.searchsorted(t, m64))
+        if prev is not None:
+            decay = 0.5 ** ((month - prev).days / half_life_days)
+            gram *= decay
+            xty *= decay
+        if stop > begin:
+            age = (m64 - t[begin:stop]) / np.timedelta64(1, "D")
+            w = 0.5 ** (age / half_life_days)
+            xs = x[begin:stop]
+            gram += (xs.T @ xs.multiply(w[:, None])).toarray()
+            xty += xs.T @ (w * y[begin:stop])
+        prev, begin = month, stop
+        out.append(solve(gram + ridge * np.eye(n), xty, assume_a="pos"))
+    return out
 
 
 def monthly_ratings(
     player_box: pd.DataFrame,
     games: pd.DataFrame,
-    ridge: float = 5.0,
+    stints: pd.DataFrame | None = None,
+    ridge: float = GAME_RIDGE,
+    stint_ridge: float = STINT_RIDGE,
     half_life_days: float = 730.0,
     min_games: int = 500,
 ) -> pd.DataFrame:
-    """Ratings as of the first of each month: (month, athlete_id, rating)."""
+    """Ratings as of the first of each month: (month, athlete_id, rating).
+
+    With ``stints`` (the ``stints`` table), the average of the game-level
+    and stint-level fits; without, the game-level fit alone.
+    """
     finals = games[games["status"] == "final"].copy()
     finals["start"] = pd.to_datetime(finals["start"], utc=True)
     app = player_box[(~player_box["dnp"]) & (player_box["min"] > 0)][
@@ -66,23 +155,43 @@ def monthly_ratings(
         freq="MS",
         tz="UTC",
     )
+    starts = np.sort(_utc(finals["start"]))
+    months = months[
+        [
+            np.searchsorted(starts, m.tz_localize(None).to_datetime64()) >= min_games
+            for m in months
+        ]
+    ]
+    if months.empty:
+        return pd.DataFrame(columns=["month", "athlete_id", "rating"])
+    fits = [_monthly_fit(*_design(app, finals, players), months, ridge, half_life_days)]
+    if stints is not None and not stints.empty:
+        rated = finals["game_id"].isin(set(stints["game_id"]))
+        parts = [
+            _stint_design(stints, finals, players),
+            _design(app, finals[~rated], players),
+        ]
+        x, y, t = (
+            sparse.vstack([p[0] for p in parts]).tocsr(),
+            np.concatenate([p[1] for p in parts]),
+            np.concatenate([p[2] for p in parts]),
+        )
+        fits.append(_monthly_fit(x, y, t, months, stint_ridge, half_life_days))
+    first = (
+        app.merge(finals[["game_id", "start"]], on="game_id")
+        .groupby("athlete_id")["start"]
+        .min()
+        .reindex(players)
+    )
     out = []
-    for month in months:
-        past = finals[finals["start"] < month]
-        if len(past) < min_games:
-            continue
-        x, y = _design(app, past, players)
-        age = (month - past["start"]).dt.total_seconds().to_numpy() / 86400
-        w = np.sqrt(0.5 ** (age / half_life_days))
-        sol = lsqr(sparse.diags(w) @ x, w * y, damp=np.sqrt(ridge))[0]
-        seen = np.asarray(abs(x[:, :-1]).sum(axis=0)).ravel() > 0
+    for k, month in enumerate(months):
+        seen = (first < month).to_numpy()
+        rating = np.mean([f[k][:-1] for f in fits], axis=0)
         out.append(
             pd.DataFrame(
-                {"month": month, "athlete_id": players[seen], "rating": sol[:-1][seen]}
+                {"month": month, "athlete_id": players[seen], "rating": rating[seen]}
             )
         )
-    if not out:
-        return pd.DataFrame(columns=["month", "athlete_id", "rating"])
     return pd.concat(out, ignore_index=True)
 
 

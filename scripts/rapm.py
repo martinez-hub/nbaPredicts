@@ -14,9 +14,12 @@ Steps:
     uv run python scripts/rapm.py tune              # ridge on pre-test months
     uv run python scripts/rapm.py rate              # next-month rating quality
     uv run python scripts/rapm.py equine [--ratings average]  # EQUINE input
+    uv run python scripts/rapm.py store             # stints into data/
 
 ``fetch`` asks ESPN's summary endpoint once per finished game (the same
-volume as the box-score history) and keeps only what stints need.
+volume as the box-score history) and keeps only what stints need. The
+stint code itself is ``nbapredicts.stints``, which the daily job runs on
+each new game; ``store`` writes the history it starts from.
 """
 
 from __future__ import annotations
@@ -32,47 +35,14 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from nbapredicts.stints import SUB, compact, game_stints
+
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "cache.nosync/rapm"
 PBP = ROOT / "cache.nosync/pbp"
-SUB = "584"  # ESPN's play type id for a substitution
 RNG = np.random.default_rng(0)
 
 log = logging.getLogger("rapm")
-
-
-def clock_seconds(display: str) -> float:
-    """'11:36' -> 696.0; '45.2' (the last minute) -> 45.2."""
-    if ":" in display:
-        m, s = display.split(":", 1)
-        return int(m) * 60 + float(s)
-    return float(display or 0)
-
-
-def compact(summary: dict[str, Any]) -> dict[str, Any]:
-    """What stints need from a summary: starters and a slim play list."""
-    comp = summary["header"]["competitions"][0]
-    home = next(c["team"]["id"] for c in comp["competitors"] if c["homeAway"] == "home")
-    starters = {}
-    for team in summary["boxscore"].get("players", []):
-        athletes = team["statistics"][0]["athletes"] if team["statistics"] else []
-        starters[team["team"]["id"]] = [
-            a["athlete"]["id"] for a in athletes if a.get("starter")
-        ]
-    plays = [
-        [
-            int(p.get("sequenceNumber") or 0),
-            int(p["period"]["number"]),
-            clock_seconds(p.get("clock", {}).get("displayValue", "0")),
-            p.get("type", {}).get("id", ""),
-            (p.get("team") or {}).get("id"),
-            [a["athlete"]["id"] for a in p.get("participants", []) if "athlete" in a],
-            int(p.get("homeScore") or 0),
-            int(p.get("awayScore") or 0),
-        ]
-        for p in summary.get("plays", [])
-    ]
-    return {"home_id": home, "starters": starters, "plays": plays}
 
 
 def pbp_path(game_id: str) -> Path:
@@ -194,173 +164,6 @@ def smoke_report(ids: list[str], raw_checks: list[tuple[str, str]]) -> None:
 # --------------------------------------------------------------------------
 
 
-def period_length(period: int) -> float:
-    return 720.0 if period <= 4 else 300.0
-
-
-def period_start(period: int) -> float:
-    return sum(period_length(p) for p in range(1, period))
-
-
-def build_stints(
-    game: dict[str, Any], team_of: dict[str, str]
-) -> tuple[list[tuple], dict[str, Any]]:
-    """Stints of one game, and what went wrong if anything.
-
-    A stint: (start s, end s, home lineup, away lineup, home pts, away pts).
-    Period 1 opens with the box score's starters. Later periods open with
-    the players who act in the period before entering it (older feeds do
-    not log substitutions between periods), filled to five from those on
-    the floor at the end of the period before who are not seen entering.
-    Substitutions at the same moment change the lineup at once; points
-    scored at that moment after the change count for the new lineup.
-    """
-    home = game["home_id"]
-    away = next(t for t in game["starters"] if t != home)
-    plays = [p for p in game["plays"] if p[1] >= 1]
-    issues: dict[str, Any] = {}
-    by_period: dict[int, list] = {}
-    for p in plays:
-        by_period.setdefault(p[1], []).append(p)
-    on = {t: list(game["starters"].get(t, [])) for t in (home, away)}
-    stints: list[tuple] = []
-    score = (0, 0)
-    for period in sorted(by_period):
-        rows = by_period[period]
-        if period > 1:
-            first: dict[str, list[str]] = {home: [], away: []}
-            entered: set[str] = set()
-            for p in rows:
-                if p[3] == SUB and len(p[5]) == 2:
-                    came, left = p[5]
-                    t = team_of.get(left)
-                    if left not in entered and t in first and left not in first[t]:
-                        first[t].append(left)
-                    entered.add(came)
-                    continue
-                for a in p[5]:
-                    t = team_of.get(a)
-                    if a not in entered and t in first and a not in first[t]:
-                        first[t].append(a)
-            for t in (home, away):
-                for a in on[t]:
-                    if len(first[t]) >= 5:
-                        break
-                    if a not in first[t] and a not in entered:
-                        first[t].append(a)
-                if len(first[t]) != 5:
-                    issues.setdefault("period_start", []).append((period, t))
-                on[t] = first[t][:5]
-        base, length = period_start(period), period_length(period)
-        t0 = base
-        s0 = score
-        for i, p in enumerate(rows):
-            now = base + length - p[2]
-            score = (p[6], p[7])
-            if p[3] != SUB or len(p[5]) not in (1, 2):
-                continue
-            if len(p[5]) == 2:
-                came, left = p[5]
-            else:
-                # "enters the game for X" with the entering player missing:
-                # the first teammate to act off the floor came in here.
-                left = p[5][0]
-                came = next_off_floor(rows[i + 1 :], team_of, left, on)
-                if came is None:
-                    issues["unknown_entry"] = issues.get("unknown_entry", 0) + 1
-                    continue
-            t = team_of.get(left, p[4])
-            if t not in on:
-                continue
-            if now > t0:
-                stints.append(
-                    (
-                        t0,
-                        now,
-                        tuple(on[home]),
-                        tuple(on[away]),
-                        score[0] - s0[0],
-                        score[1] - s0[1],
-                    )
-                )
-                t0, s0 = now, score
-            if left in on[t]:
-                on[t] = [came if a == left else a for a in on[t]]
-            else:
-                issues["sub_not_on_floor"] = issues.get("sub_not_on_floor", 0) + 1
-                if came not in on[t]:
-                    on[t] = [*on[t], came][-5:]
-        end = base + length
-        if end > t0:
-            stints.append(
-                (
-                    t0,
-                    end,
-                    tuple(on[home]),
-                    tuple(on[away]),
-                    score[0] - s0[0],
-                    score[1] - s0[1],
-                )
-            )
-    return stints, issues
-
-
-def next_off_floor(
-    rest: list, team_of: dict[str, str], left: str, on: dict[str, list[str]]
-) -> str | None:
-    """The first player of ``left``'s team to act while off the floor."""
-    team = team_of.get(left)
-    if team not in on:
-        return None
-    came_in: set[str] = set()
-    for q in rest:
-        if q[3] == SUB and len(q[5]) == 2:
-            q_came, q_left = q[5]
-            if team_of.get(q_left) == team and q_left not in on[team]:
-                if q_left != left and q_left not in came_in:
-                    return q_left
-            came_in.add(q_came)
-            continue
-        for a in q[5]:
-            if team_of.get(a) == team and a not in on[team] and a != left:
-                if a not in came_in:
-                    return a
-    return None
-
-
-def reconcile(
-    stints: list[tuple], box: pd.DataFrame, final: tuple[int, int]
-) -> dict[str, Any]:
-    """Rebuilt minutes and points against the box score."""
-    mins: dict[str, float] = {}
-    for t0, t1, h, a, _, _ in stints:
-        for p in (*h, *a):
-            mins[p] = mins.get(p, 0.0) + (t1 - t0) / 60
-    # Some 2012-13 box scores have no minutes: then only the roster checks.
-    has_minutes = bool(box["min"].notna().any())
-    played = box[(~box["dnp"]) & (box["min"] > 0)] if has_minutes else box
-    err = np.array(
-        [
-            abs(mins.get(a, 0.0) - m)
-            for a, m in zip(played["athlete_id"], played["min"], strict=True)
-        ]
-    )
-    # On the floor for under a minute with 0 in the box (rounded down).
-    extra = {a for a in set(mins) - set(played["athlete_id"]) if mins[a] > 1.0}
-    if not has_minutes:
-        err = np.array([])
-    pts = (sum(s[4] for s in stints), sum(s[5] for s in stints))
-    sizes_ok = all(len(s[2]) == 5 and len(s[3]) == 5 for s in stints)
-    return {
-        "mean_err": float(err.mean()) if len(err) else np.nan,
-        "max_err": float(err.max()) if len(err) else np.nan,
-        "extra_players": len(extra),
-        "points_ok": pts == final,
-        "sizes_ok": sizes_ok,
-        "has_minutes": has_minutes,
-    }
-
-
 def stints_step() -> None:
     from nbapredicts.collect import Store
 
@@ -371,41 +174,18 @@ def stints_step() -> None:
     box_by_game = {g: part for g, part in pb.groupby("game_id")}
     rows, checks = [], []
     for i, gid in enumerate(finals.index, 1):
-        game = load_pbp(gid)
         box = box_by_game.get(gid)
-        if game is None or box is None or len(game["starters"]) != 2:
+        if box is None:
             checks.append({"game_id": gid, "status": "missing"})
             continue
-        team_of = dict(zip(box["athlete_id"], box["team_id"], strict=True))
         g = finals.loc[gid]
-        try:
-            stints, issues = build_stints(game, team_of)
-        except (StopIteration, KeyError, IndexError, ValueError) as err:
-            checks.append({"game_id": gid, "status": f"error {err}"})
-            continue
-        rec = reconcile(stints, box, (int(g["home_pts"]), int(g["away_pts"])))
-        minutes_ok = (
-            rec["mean_err"] <= 0.6 and rec["max_err"] <= 3.0
-            if rec["has_minutes"]
-            else not issues
-        )
-        ok = (
-            rec["sizes_ok"]
-            and rec["points_ok"]
-            and rec["extra_players"] == 0
-            and minutes_ok
-        )
+        final = (int(g["home_pts"]), int(g["away_pts"]))
+        stints, check = game_stints(load_pbp(gid), box, final)
         checks.append(
-            {
-                "game_id": gid,
-                "status": "ok" if ok else "failed",
-                **rec,
-                "issues": json.dumps(issues),
-            }
+            {"game_id": gid, **check, "issues": json.dumps(check.get("issues", {}))}
         )
-        if ok:
-            for t0, t1, h, a, hp, ap in stints:
-                rows.append((gid, (t1 - t0) / 60, hp - ap, *h, *a))
+        for t0, t1, h, a, hp, ap in stints:
+            rows.append((gid, (t1 - t0) / 60, hp - ap, *h, *a))
         if i % 2000 == 0:
             log.info("%d/%d games", i, len(finals))
     cols = [
@@ -442,6 +222,24 @@ def stints_step() -> None:
         )
     )
     print(chk[chk["status"] != "ok"]["status"].value_counts().head(5).to_dict())
+
+
+def store_step() -> None:
+    """Every fetched game's stints and check into data/, as the daily job
+    keeps them; games finished since ``fetch`` are left to the daily job."""
+    from nbapredicts.collect import Store
+    from nbapredicts.stints import update
+
+    store = Store(ROOT / "data")
+    games = store.load("games")
+    fetched = set(pd.read_csv(WORK / "checks.csv", dtype={"game_id": str})["game_id"])
+    result = update(
+        store,
+        games[games["game_id"].isin(fetched)],
+        store.load("player_box"),
+        load_pbp,
+    )
+    print(json.dumps(result))
 
 
 # --------------------------------------------------------------------------
@@ -789,7 +587,9 @@ def equine(names: list[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("step", choices=["fetch", "stints", "tune", "rate", "equine"])
+    parser.add_argument(
+        "step", choices=["fetch", "stints", "tune", "rate", "equine", "store"]
+    )
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument(
@@ -808,6 +608,8 @@ def main() -> None:
         rate()
     elif args.step == "equine":
         equine(args.ratings)
+    elif args.step == "store":
+        store_step()
 
 
 if __name__ == "__main__":

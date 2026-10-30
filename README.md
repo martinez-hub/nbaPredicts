@@ -52,12 +52,16 @@ under `data/`, so a daily commit is a small text diff:
 | `data/games/` | one per game, final or scheduled |
 | `data/team_box/` | one per team per final game |
 | `data/player_box/` | one per player per final game, DNPs included |
+| `data/stints/` | one per stint (a stretch with the same ten players on the floor) of each game whose play-by-play matches its box score |
+| `data/stint_checks/` | one per final game whose play-by-play was read, and whether it matched |
 | `data/predictions/` | the last prediction published before each tip-off |
 | `data/player_predictions/` | the same for player stat lines |
 
 About 5% of 2012-16 games have a final score but no box score on ESPN; their
 team ratings use the score and that season's median pace, and their player
-rows are skipped.
+rows are skipped. The daily job reads each new game's play-by-play once
+(`nbapredicts.stints`); the player impact ratings are fit on the stints as
+well as on whole games.
 
 ## Leakage
 

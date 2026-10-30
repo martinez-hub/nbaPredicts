@@ -98,7 +98,9 @@ MAE 11.16, correlation 0.475, 68.2% winners.
 
 The impact features improve the stand-alone model every season; next to
 either line they add nothing measurable (feature weight next to the open
-0.05-0.10). The opening line already prices roster strength.
+0.05-0.10). The opening line already prices roster strength. Since
+2026-10-30 the ratings are the average of these and stint-level ratings
+("Stint-level RAPM from play-by-play", below).
 
 ## Features-only EQUINE
 
@@ -111,13 +113,15 @@ the defaults.
 
 | Season | EQUINE with the line | Closing line | EQUINE, no line | Logistic | Elo |
 |---|---|---|---|---|---|
-| 2023-24 | 68.8% / 0.2001 | 68.9% / 0.1993 | 66.0% / 0.2081 | 66.3% / 0.2072 | 64.4% / 0.2182 |
-| 2024-25 | 69.6% / 0.2012 | 69.3% / 0.2012 | 68.5% / 0.2054 | 68.7% / 0.2055 | 64.7% / 0.2185 |
-| 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.5% / 0.2045 | 67.8% / 0.2040 | 67.4% / 0.2110 |
+| 2023-24 | 68.8% / 0.2002 | 68.9% / 0.1993 | 67.1% / 0.2070 | 66.1% / 0.2061 | 64.4% / 0.2182 |
+| 2024-25 | 69.5% / 0.2012 | 69.3% / 0.2012 | 69.0% / 0.2045 | 68.6% / 0.2045 | 64.7% / 0.2185 |
+| 2025-26 | 68.5% / 0.1978 | 68.5% / 0.1974 | 67.6% / 0.2040 | 67.9% / 0.2040 | 67.4% / 0.2110 |
 
-(accuracy / Brier; rerun 2026-10-29 on the fixed injury history). By
-EQUINE's GP-variance tercile the no-line model picked 62.7%, 65.5% and 74.7%
-correctly (most ordinary to rarest), calibration error 0.016, 0.017, 0.031. With the current settings, high variance marks
+(accuracy / Brier; rerun 2026-10-30 with the stint ratings, below; the
+day before, on game-level ratings alone, EQUINE without the line had
+0.2081 / 0.2054 / 0.2045 and with it 0.2001 / 0.2012 / 0.1977). By
+EQUINE's GP-variance tercile the no-line model picked 62.9%, 65.7% and 75.0%
+correctly (most ordinary to rarest), calibration error 0.024, 0.031, 0.031. With the current settings, high variance marks
 rare, mostly lopsided matchups, which are easier to call; with EquineGP's
 defaults (LayerNorm, mean-field 25) the order had been reversed (75/65/60%).
 
@@ -426,14 +430,22 @@ published), change in Brier against production's ratings:
 The stints help the features-only model in every variant, even the one
 that predicted margins worse with actual minutes; the published stack does
 not move. The features-only model is what the page shows when no line is
-posted yet (7 of the first 32 live picks of 2026-27). Not deployed yet: the
-daily run would have to keep each game's plays (it fetches them and drops
-them), store stints in `data/` and refit them monthly.
+posted yet (7 of the first 32 live picks of 2026-27).
+
+Deployed 2026-10-30, the average: `nbapredicts.stints` reads each new
+final game's play-by-play once (a second request to the summary endpoint,
+whose cached copy drops the plays), checks it against the box score and
+keeps the stints in `data/stints` (50 MB of CSV for 2012-13..2025-26,
+about 3.5 MB a season; a failed download is retried for three days).
+`impact.monthly_ratings` fits both ratings in every run (14 s) and
+averages them. The package code rebuilds the experiment's 532,181 stints
+exactly and its ratings to 3e-14, and the published backtest moved as the
+experiment did (above).
 
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
 not, with every input tried so far. Remaining candidates from
-docs/research_plan.md: stint-level RAPM from play-by-play, a text model over
-the injury reports' reasons and logged news, and live grading against the
-line at prediction time, which the prediction log now records.
+docs/research_plan.md: a text model over the logged news (the injury
+reports' reasons added nothing, above), and live grading against the line
+at prediction time, which the prediction log now records.
