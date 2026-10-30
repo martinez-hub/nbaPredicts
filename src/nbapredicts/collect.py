@@ -268,12 +268,24 @@ def parse_injuries(summary: dict[str, Any]) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 
 
-ID_COLS = ("game_id", "team_id", "opp_id", "athlete_id", "home_id", "away_id")
+# Stint lineups (stints.py): the home team's five players, then the away's.
+LINEUP_COLS = tuple(f"{side}{k}" for side in "ha" for k in range(5))
+ID_COLS = (
+    "game_id",
+    "team_id",
+    "opp_id",
+    "athlete_id",
+    "home_id",
+    "away_id",
+    *LINEUP_COLS,
+)
 SORT_KEYS = {
     "games": ["start", "game_id"],
     "team_box": ["game_id", "team_id"],
     "player_box": ["game_id", "team_id", "athlete_id"],
     "odds": ["game_id"],
+    "stints": ["game_id", "t0"],
+    "stint_checks": ["game_id"],
 }
 
 
