@@ -87,26 +87,28 @@ def test_update_checks_each_game_once_and_retries_failed_downloads(
     store = Store(tmp_path)
     day_after = tip + pd.Timedelta(days=1)
     assert update(store, games, player_box, plays_for, day_after) == {
-        "checked": 2,
+        "checked": 1,
         "ok": 1,
         "stints": len(game_stints(plays, box, (126, 127))[0]),
     }
-    status = store.load("stint_checks").set_index("game_id")["status"]
-    assert status.to_dict() == {ids["ok"]: "ok", ids["none"]: "missing"}
     saved = store.load("stints")
     # Athlete ids are digits but must come back as text to match the box.
     assert saved[list(LINEUP_COLS)].map(lambda a: isinstance(a, str)).all().all()
     assert saved["t0"].is_monotonic_increasing
 
-    # The failed download is asked for again, and only it.
+    # Games without plays yet (a failed or an empty download) are asked
+    # for again, and only they.
     asked.clear()
     update(store, games, player_box, plays_for, day_after)
-    assert asked == [ids["flaky"]]
-    # Once the game is a few days old it is given up on.
+    assert sorted(asked) == sorted([ids["flaky"], ids["none"]])
+    # Once a game is a few days old it is given up on.
     update(store, games, player_box, plays_for, tip + pd.Timedelta(days=5))
-    assert store.load("stint_checks").set_index("game_id")["status"][ids["flaky"]] == (
-        "missing"
-    )
+    status = store.load("stint_checks").set_index("game_id")["status"]
+    assert status.to_dict() == {
+        ids["ok"]: "ok",
+        ids["flaky"]: "missing",
+        ids["none"]: "missing",
+    }
     asked.clear()
     update(store, games, player_box, plays_for, tip + pd.Timedelta(days=6))
     assert asked == []
