@@ -359,6 +359,24 @@ recent pattern: the logistic without the reason beats the status rates by
 Questionable players (0.249 to 0.230-0.245). Neither d1 nor the reason is
 used.
 
+That logistic as EQUINE's chance of playing (`injury_text.py equine`,
+`injury_pplay_equine.json`): each season's listed players get it fit on the
+seasons before (Brier on them 0.1752, 0.1796, 0.1705 against the constants'
+0.1908, 0.1858, 0.1805), the availability and impact features are rebuilt
+with it, and EQUINE is refit, all else as published. Change in Brier:
+
+| | 2023-24 | 2024-25 | 2025-26 | pooled (95% interval) |
+|---|---|---|---|---|
+| EQUINE, no line | -0.0001 | -0.0001 | -0.0002 | -0.0001 (-0.0003, +0.0000) |
+| Logistic | -0.0000 | +0.0000 | -0.0001 | -0.0000 (-0.0002, +0.0001) |
+| EQUINE with the line | -0.0000 | -0.0000 | +0.0000 | -0.0000 (-0.0000, +0.0000) |
+
+A listed player is about one rotation player in a game, and being right
+more often about whether he plays moves the team's expected strength
+little (availability changes 0.4-0.8 on average); the line already prices
+the report. Not deployed: it would mean running the model at every daily
+run for a change inside the noise.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is

@@ -1,0 +1,184 @@
+{
+ "p_play_brier": {
+  "2020": {
+   "n": 1562,
+   "constants": 0.1562,
+   "learned": 0.1555
+  },
+  "2021": {
+   "n": 1757,
+   "constants": 0.1831,
+   "learned": 0.1801
+  },
+  "2022": {
+   "n": 1681,
+   "constants": 0.2001,
+   "learned": 0.195
+  },
+  "2023": {
+   "n": 1761,
+   "constants": 0.1835,
+   "learned": 0.1763
+  },
+  "2024": {
+   "n": 1983,
+   "constants": 0.1908,
+   "learned": 0.1752
+  },
+  "2025": {
+   "n": 1813,
+   "constants": 0.1858,
+   "learned": 0.1796
+  },
+  "2026": {
+   "n": 1738,
+   "constants": 0.1805,
+   "learned": 0.1705
+  },
+  "2027": {
+   "n": 69,
+   "constants": 0.2142,
+   "learned": 0.2023
+  }
+ },
+ "feature_change": {
+  "avail_diff": {
+   "2019": 0.0,
+   "2020": 0.3834,
+   "2021": 0.5131,
+   "2022": 0.4198,
+   "2023": 0.5957,
+   "2024": 0.8448,
+   "2025": 0.6492,
+   "2026": 0.4453
+  },
+  "impact_diff": {
+   "2019": 0.0,
+   "2020": 0.0562,
+   "2021": 0.067,
+   "2022": 0.0651,
+   "2023": 0.0751,
+   "2024": 0.091,
+   "2025": 0.0713,
+   "2026": 0.0581
+  }
+ },
+ "seasons": [
+  {
+   "season": 2024,
+   "n": 1319,
+   "brier": {
+    "logistic_constants": 0.20727,
+    "logistic_learned": 0.20726,
+    "equine_no_line_constants": 0.20814,
+    "equine_no_line_learned": 0.20807,
+    "equine_stack_constants": 0.20009,
+    "equine_stack_learned": 0.20009
+   },
+   "learned_minus_constants": {
+    "logistic": [
+     -1e-05,
+     -0.00033,
+     0.00033
+    ],
+    "equine_no_line": [
+     -7e-05,
+     -0.0004,
+     0.00025
+    ],
+    "equine_stack": [
+     0.0,
+     -2e-05,
+     2e-05
+    ]
+   }
+  },
+  {
+   "season": 2025,
+   "n": 1321,
+   "brier": {
+    "logistic_constants": 0.20553,
+    "logistic_learned": 0.20555,
+    "equine_no_line_constants": 0.20551,
+    "equine_no_line_learned": 0.20542,
+    "equine_stack_constants": 0.20121,
+    "equine_stack_learned": 0.2012
+   },
+   "learned_minus_constants": {
+    "logistic": [
+     2e-05,
+     -0.00026,
+     0.00031
+    ],
+    "equine_no_line": [
+     -0.0001,
+     -0.00041,
+     0.00021
+    ],
+    "equine_stack": [
+     -1e-05,
+     -4e-05,
+     2e-05
+    ]
+   }
+  },
+  {
+   "season": 2026,
+   "n": 1322,
+   "brier": {
+    "logistic_constants": 0.2039,
+    "logistic_learned": 0.20376,
+    "equine_no_line_constants": 0.20442,
+    "equine_no_line_learned": 0.20418,
+    "equine_stack_constants": 0.19771,
+    "equine_stack_learned": 0.19772
+   },
+   "learned_minus_constants": {
+    "logistic": [
+     -0.00014,
+     -0.00036,
+     6e-05
+    ],
+    "equine_no_line": [
+     -0.00024,
+     -0.00049,
+     -0.0
+    ],
+    "equine_stack": [
+     1e-05,
+     -1e-05,
+     2e-05
+    ]
+   }
+  },
+  {
+   "season": "pooled",
+   "n": 3962,
+   "brier": {
+    "logistic_constants": 0.20557,
+    "logistic_learned": 0.20552,
+    "equine_no_line_constants": 0.20602,
+    "equine_no_line_learned": 0.20588,
+    "equine_stack_constants": 0.19967,
+    "equine_stack_learned": 0.19967
+   },
+   "learned_minus_constants": {
+    "logistic": [
+     -4e-05,
+     -0.00021,
+     0.00012
+    ],
+    "equine_no_line": [
+     -0.00014,
+     -0.00031,
+     4e-05
+    ],
+    "equine_stack": [
+     -0.0,
+     -2e-05,
+     1e-05
+    ]
+   }
+  }
+ ]
+}

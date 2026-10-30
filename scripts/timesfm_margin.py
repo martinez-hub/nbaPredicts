@@ -67,8 +67,11 @@ def paired(y, a, b, n=2000):
     ]
 
 
-def features() -> pd.DataFrame:
-    """Game features as the daily job builds them, with the line and TimesFM."""
+def features(reports: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Game features as the daily job builds them, with the line and TimesFM.
+
+    ``reports``: the injury report history to use instead of the stored one.
+    """
     from nbapredicts.features import (
         apply_pregame_availability,
         build_features,
@@ -82,7 +85,8 @@ def features() -> pd.DataFrame:
         store.load("team_box"),
         store.load("player_box"),
     )
-    reports = store.load("injury_reports")
+    if reports is None:
+        reports = store.load("injury_reports")
     teams = json.loads((ROOT / "data/teams.json").read_text())
     team_ids = {t["name"]: tid for tid, t in teams.items()}
     pv = player_values(pb, games)
