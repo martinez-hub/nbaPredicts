@@ -479,6 +479,7 @@ def pregame_rosters(
     team_ids: dict[str, str],
     window: int = 10,
     columns: tuple[str, ...] = ("post_value",),
+    report_columns: tuple[str, ...] = (),
 ) -> pd.DataFrame:
     """Each finished game's roster as it could be known before tip-off.
 
@@ -487,6 +488,8 @@ def pregame_rosters(
     Chance of playing (``p_play``): that day's official injury report;
     players it does not list, and everyone on days without a report, count
     as available. ``team_ids`` maps the report's full team names to ids.
+    ``report_columns`` (such as ``status``, ``reason``) come along from the
+    report row used, empty for players it does not list.
     """
     from .injuries import P_PLAY, normalize_name
 
@@ -541,7 +544,7 @@ def pregame_rosters(
     rep = rep.assign(_order=order).sort_values("_order")
     rep = rep.drop_duplicates(["team_id", "date", "key"], keep="last")
     roster = roster.merge(
-        rep[["team_id", "date", "key", "p_play"]],
+        rep[["team_id", "date", "key", "p_play", *report_columns]],
         on=["team_id", "date", "key"],
         how="left",
     )

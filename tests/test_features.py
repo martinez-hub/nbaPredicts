@@ -189,6 +189,21 @@ def test_pregame_availability_uses_the_report_and_not_the_game(league):
     p2.loc[p2["game_id"] == last["game_id"], "pts"] = 99.0
     assert _pregame(games, p2, empty).loc[(last["game_id"], team)] == base
 
+    # The report's own columns can come along onto the roster row.
+    from nbapredicts.features import pregame_rosters
+
+    teams = {f"Team {t}": t for t in games["home_id"].unique()}
+    reason = q.assign(reason="Injury/Illness - Left Ankle; Sprain")
+    roster = pregame_rosters(
+        pv, games, reason, teams, report_columns=("status", "reason")
+    )
+    rows = roster[(roster["game_id"] == last["game_id"]) & (roster["team_id"] == team)]
+    listed = rows[rows["name"] == star]
+    assert listed[["status", "reason", "p_play"]].values.tolist() == [
+        ["Questionable", "Injury/Illness - Left Ankle; Sprain", 0.5]
+    ]
+    assert rows.loc[rows["name"] != star, "status"].isna().all()
+
 
 def _letters(athlete_id: str) -> str:
     """'3-0' -> 'Player d a': name matching ignores digits, as real names have none."""
