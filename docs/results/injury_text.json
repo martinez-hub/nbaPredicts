@@ -1,0 +1,257 @@
+[
+ {
+  "season": 2024,
+  "n": 1983,
+  "train_rows": 6769,
+  "played": 0.594,
+  "brier": {
+   "constants": 0.19082,
+   "status_rate": 0.18969,
+   "no_reason": 0.17509,
+   "reason": 0.17686,
+   "reason_d1": 0.17701,
+   "d1": 0.31762,
+   "d1_recal": 0.19014
+  },
+  "log_loss": {
+   "constants": 0.5501,
+   "status_rate": 0.54746,
+   "no_reason": 0.51224,
+   "reason": 0.51656,
+   "reason_d1": 0.51687,
+   "d1": 0.84562,
+   "d1_recal": 0.54915
+  },
+  "vs": {
+   "status_rate_minus_constants": [
+    -0.00113,
+    -0.0021,
+    -0.00016
+   ],
+   "no_reason_minus_status_rate": [
+    -0.0146,
+    -0.01906,
+    -0.0102
+   ],
+   "reason_minus_no_reason": [
+    0.00177,
+    -0.00024,
+    0.00378
+   ],
+   "d1_recal_minus_status_rate": [
+    0.00045,
+    -0.00011,
+    0.00102
+   ],
+   "reason_d1_minus_reason": [
+    0.00016,
+    2e-05,
+    0.0003
+   ]
+  },
+  "by_status": {
+   "Questionable": {
+    "n": 1365,
+    "played": 0.543,
+    "status_rate": 0.2485,
+    "no_reason": 0.2296,
+    "reason": 0.2321,
+    "reason_d1": 0.2323
+   },
+   "Doubtful": {
+    "n": 145,
+    "played": 0.014,
+    "status_rate": 0.0138,
+    "no_reason": 0.0141,
+    "reason": 0.0141,
+    "reason_d1": 0.0141
+   },
+   "Probable": {
+    "n": 473,
+    "played": 0.92,
+    "status_rate": 0.074,
+    "no_reason": 0.0672,
+    "reason": 0.0674,
+    "reason_d1": 0.0674
+   }
+  },
+  "rare_reasons": {
+   "n": 486,
+   "reason_d1_minus_reason": [
+    0.00017,
+    -0.00025,
+    0.00065
+   ]
+  }
+ },
+ {
+  "season": 2025,
+  "n": 1813,
+  "train_rows": 8752,
+  "played": 0.575,
+  "brier": {
+   "constants": 0.18581,
+   "status_rate": 0.18586,
+   "no_reason": 0.17977,
+   "reason": 0.18023,
+   "reason_d1": 0.18021,
+   "d1": 0.30749,
+   "d1_recal": 0.18588
+  },
+  "log_loss": {
+   "constants": 0.53933,
+   "status_rate": 0.53931,
+   "no_reason": 0.51999,
+   "reason": 0.52018,
+   "reason_d1": 0.52014,
+   "d1": 0.82231,
+   "d1_recal": 0.53941
+  },
+  "vs": {
+   "status_rate_minus_constants": [
+    5e-05,
+    -0.00107,
+    0.00115
+   ],
+   "no_reason_minus_status_rate": [
+    -0.00609,
+    -0.01072,
+    -0.00153
+   ],
+   "reason_minus_no_reason": [
+    0.00046,
+    -0.00158,
+    0.00241
+   ],
+   "d1_recal_minus_status_rate": [
+    2e-05,
+    -0.0001,
+    0.00013
+   ],
+   "reason_d1_minus_reason": [
+    -3e-05,
+    -0.00011,
+    5e-05
+   ]
+  },
+  "by_status": {
+   "Questionable": {
+    "n": 1169,
+    "played": 0.513,
+    "status_rate": 0.2501,
+    "no_reason": 0.2446,
+    "reason": 0.2465,
+    "reason_d1": 0.2465
+   },
+   "Doubtful": {
+    "n": 158,
+    "played": 0.019,
+    "status_rate": 0.0187,
+    "no_reason": 0.0185,
+    "reason": 0.0186,
+    "reason_d1": 0.0186
+   },
+   "Probable": {
+    "n": 486,
+    "played": 0.905,
+    "status_rate": 0.0857,
+    "no_reason": 0.0764,
+    "reason": 0.0733,
+    "reason_d1": 0.0734
+   }
+  },
+  "rare_reasons": {
+   "n": 324,
+   "reason_d1_minus_reason": [
+    -0.00024,
+    -0.00055,
+    6e-05
+   ]
+  }
+ },
+ {
+  "season": 2026,
+  "n": 1738,
+  "train_rows": 10565,
+  "played": 0.551,
+  "brier": {
+   "constants": 0.1805,
+   "status_rate": 0.18011,
+   "no_reason": 0.17042,
+   "reason": 0.1701,
+   "reason_d1": 0.17002,
+   "d1": 0.29781,
+   "d1_recal": 0.18013
+  },
+  "log_loss": {
+   "constants": 0.5227,
+   "status_rate": 0.52129,
+   "no_reason": 0.49696,
+   "reason": 0.49698,
+   "reason_d1": 0.4967,
+   "d1": 0.80014,
+   "d1_recal": 0.52165
+  },
+  "vs": {
+   "status_rate_minus_constants": [
+    -0.00039,
+    -0.00145,
+    0.00059
+   ],
+   "no_reason_minus_status_rate": [
+    -0.00969,
+    -0.01381,
+    -0.00541
+   ],
+   "reason_minus_no_reason": [
+    -0.00031,
+    -0.00245,
+    0.00187
+   ],
+   "d1_recal_minus_status_rate": [
+    2e-05,
+    -4e-05,
+    8e-05
+   ],
+   "reason_d1_minus_reason": [
+    -8e-05,
+    -0.00022,
+    5e-05
+   ]
+  },
+  "by_status": {
+   "Questionable": {
+    "n": 1115,
+    "played": 0.523,
+    "status_rate": 0.2495,
+    "no_reason": 0.2369,
+    "reason": 0.2362,
+    "reason_d1": 0.2361
+   },
+   "Doubtful": {
+    "n": 215,
+    "played": 0.009,
+    "status_rate": 0.0094,
+    "no_reason": 0.0095,
+    "reason": 0.0095,
+    "reason_d1": 0.0095
+   },
+   "Probable": {
+    "n": 408,
+    "played": 0.912,
+    "status_rate": 0.0805,
+    "no_reason": 0.0734,
+    "reason": 0.0742,
+    "reason_d1": 0.074
+   }
+  },
+  "rare_reasons": {
+   "n": 204,
+   "reason_d1_minus_reason": [
+    -0.00071,
+    -0.00172,
+    6e-05
+   ]
+  }
+ }
+]
