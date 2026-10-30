@@ -29,8 +29,9 @@ _PDF = re.compile(
 STATUSES = ("Out", "Doubtful", "Questionable", "Probable", "Available")
 P_PLAY = {
     "out": 0.0,
-    # 1.4% of matched Doubtful players played (2018-19..2026-27 reports
-    # joined to box scores); Questionable 51%, Probable 82%.
+    # Rostered players (in the team's previous 10 games) listed on the
+    # pre-game report, 2019-20..2025-26, who then logged minutes: Doubtful
+    # 2.0%, Questionable 52.6%, Probable 90.9%.
     "doubtful": 0.03,
     "questionable": 0.5,
     "day-to-day": 0.6,  # ESPN's only non-Out status
@@ -42,6 +43,8 @@ _ROW = re.compile(
     r"([^\s,][^,]*?,\s*[^\s].*?)\s{2,}(" + "|".join(STATUSES) + r")(?:\s{2,}|\s*$)"
 )
 _GAME_DATE = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
+# The column header, spaces removed: "Game Date  Game Time  Matchup ..."
+_HEADER = "gamedategametimematchup"
 _SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 # official.nba.com refuses non-browser user agents.
 _HEADERS = {
@@ -123,8 +126,15 @@ def parse_report(pdf: bytes, team_names: list[str]) -> pd.DataFrame:
     team = game_date = None
     for page in PdfReader(io.BytesIO(pdf)).pages:
         lines = page.extract_text(extraction_mode="layout").splitlines()
-        # Layout extraction lists a page's rows bottom-up.
-        for line in reversed(lines):
+        # Layout extraction lists a page's rows bottom-up in reports from
+        # 2023-24 on (the column header, on page 1 only, comes out near the
+        # end) and top-down in older ones (a header near the top of every
+        # page). Read top-down either way: each team and game date is printed
+        # on its first row only.
+        header = [i for i, line in enumerate(lines) if _HEADER in _squash(line)]
+        if not (header and header[0] < len(lines) / 2):
+            lines = lines[::-1]
+        for line in lines:
             match = _ROW.search(line)
             # The team column ends at the last run of 2+ spaces before the
             # player's "Last, First" comma; looking only there keeps a
