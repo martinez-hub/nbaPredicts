@@ -33,6 +33,21 @@ def test_parses_the_official_report():
     assert "LA Clippers" not in teams  # "LA" must not match inside other words
 
 
+def test_parses_an_older_report_layout():
+    # Reports to 2022-23 come out of the PDF top-down (newer ones bottom-up);
+    # reading them reversed put each team's players under the next team.
+    old = FIXTURE.with_name("injury_report_2022-10-18_06PM.pdf")
+    rows = parse_report(old.read_bytes(), [t["name"] for t in TEAMS.values()])
+    team = rows.set_index("player")["team"]
+    assert team["Caruso, Alex"] == "Chicago Bulls"
+    assert team["Oladipo, Victor"] == "Miami Heat"
+    assert team["Williams III, Robert"] == "Boston Celtics"
+    assert team["Kleber, Maxi"] == "Dallas Mavericks"
+    dates = rows.set_index("player")["game_date"]
+    assert dates["Iguodala, Andre"] == "2022-10-18"  # today's late game
+    assert dates["Oladipo, Victor"] == "2022-10-19"  # tomorrow's
+
+
 def test_names_match_across_sources():
     assert normalize_name("Butler III, Jimmy") == normalize_name("Jimmy Butler III")
     assert normalize_name("Dončić, Luka") == "luka doncic"

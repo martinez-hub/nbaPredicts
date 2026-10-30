@@ -8,7 +8,7 @@ the first evening tip-offs), downloads it once into ``cache.nosync/``, parses
 it, and writes ``data/injury_reports/<season>.csv``: one row per listed
 player with team, status, reason and the report's publication time.
 
-    uv run python scripts/injury_archive.py [--limit N]
+    uv run python scripts/injury_archive.py [--limit N] [--seasons 2019 2020 ...]
 """
 
 from __future__ import annotations
@@ -85,6 +85,14 @@ def season_of(day: str) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--seasons",
+        type=int,
+        nargs="+",
+        default=None,
+        help="rebuild only these seasons' files (the current one is also written"
+        " by the daily runs)",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
@@ -94,6 +102,8 @@ def main() -> None:
     cache.mkdir(parents=True, exist_ok=True)
 
     daily = pick_daily(report_index())
+    if args.seasons:
+        daily = daily[daily["day"].map(season_of).isin(args.seasons)]
     if args.limit:
         daily = daily.tail(args.limit)
     log.info("%d game days with a report by 6:30 PM ET", len(daily))
