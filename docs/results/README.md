@@ -376,6 +376,60 @@ about whether they play moves the team's expected strength little (availability 
 the report. Not deployed: it would mean running the model at every daily
 run for a change inside the noise.
 
+## Stint-level RAPM from play-by-play
+
+`scripts/rapm.py`, results in `rapm_rating_quality.json` and
+`rapm_equine.json`. The impact features rate players by game-level adjusted
+plus-minus (`impact.monthly_ratings`: each player's minutes against the
+final margin, ridge 5, two-year half-life, refit monthly on earlier games).
+ESPN's play-by-play splits each game into stints, the stretches with the
+same ten players on the floor.
+
+- Data: play-by-play for 18,178 games, 2012-13 on (4 not served), fetched
+  once from ESPN's summary endpoint (the box-score history's volume) and
+  kept compact (115 MB).
+- Stints: period 1 opens with the box score's starters; later periods with
+  the players who act before entering (older feeds skip substitutions
+  between periods), filled from the previous period's lineup;
+  substitutions that name only the player leaving ("enters the game for
+  X") take the first teammate to act off the floor. Every game is checked
+  against its box score (each player's minutes within 0.6 on average and 3
+  at most, points equal to the final, five a side): 96.6% pass (87.5% in
+  2012-13, 92.4% in 2017-18, 96-99% otherwise), median error 0.25 minutes
+  (box minutes are whole numbers), 532,181 stints. A game that fails keeps
+  its whole-game row.
+- Ratings: same units (margin per 48 minutes on the floor), decay and
+  monthly refit as production; stints weighted by length. The same solver
+  on whole-game rows reproduces production's ratings (correlation 1.000).
+  Ridge chosen on 2016-17..2022-23 only.
+
+Each game's margin from the ratings as of its month and the minutes
+actually played:
+
+| | 2016-17..2022-23: MAE / corr | 2023-24..2025-26: MAE / corr / winners | MAE vs production (95%) |
+|---|---|---|---|
+| Game-level, ridge 5 (production) | 10.471 / 0.377 | 11.169 / 0.462 / 67.8% | |
+| Game-level, ridge 15 | 10.393 / 0.380 | 11.172 / 0.457 / 67.8% | +0.003 (-0.053, +0.059) |
+| Stint-level, ridge 45 | 10.396 / 0.384 | 11.306 / 0.439 / 67.4% | +0.136 (+0.021, +0.250) |
+| Stint, shrunk toward game-level (ridge 300) | 10.452 / 0.388 | 11.171 / 0.465 / 68.0% | +0.001 (-0.020, +0.026) |
+| Average of game-level and stint | 10.346 / 0.394 | 11.123 / 0.464 / 67.9% | -0.046 (-0.103, +0.012) |
+
+As EQUINE's impact input (features rebuilt, EQUINE refit, all else as
+published), change in Brier against production's ratings:
+
+| Ratings | EQUINE, no line: 2023-24 / 2024-25 / 2025-26 | pooled (95%) | EQUINE with the line, pooled |
+|---|---|---|---|
+| Average | -0.0011 / -0.0010 / -0.0005 | -0.0009 (-0.0014, -0.0004) | +0.0001 (-0.0001, +0.0002) |
+| Stint only | -0.0021 / -0.0010 / -0.0006 | -0.0012 (-0.0024, -0.0001) | +0.0002 (-0.0001, +0.0004) |
+| Stint, shrunk | -0.0005 / -0.0005 / -0.0002 | -0.0004 (-0.0006, -0.0001) | +0.0000 (-0.0000, +0.0001) |
+
+The stints help the features-only model in every variant, even the one
+that predicted margins worse with actual minutes; the published stack does
+not move. The features-only model is what the page shows when no line is
+posted yet (7 of the first 32 live picks of 2026-27). Not deployed yet: the
+daily run would have to keep each game's plays (it fetches them and drops
+them), store stints in `data/` and refit them monthly.
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is

@@ -1,0 +1,273 @@
+{
+ "configs": [
+  "game_5",
+  "game_15",
+  "stint_45",
+  "stint_prior",
+  "average"
+ ],
+ "seasons": {
+  "game_5": {
+   "2024": {
+    "games": 1319,
+    "mae": 11.1738,
+    "corr": 0.4288,
+    "winners": 0.6732,
+    "mae_minus_production": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "2025": {
+    "games": 1321,
+    "mae": 10.9051,
+    "corr": 0.4882,
+    "winners": 0.6851,
+    "mae_minus_production": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "2026": {
+    "games": 1322,
+    "mae": 11.4284,
+    "corr": 0.4653,
+    "winners": 0.6747,
+    "mae_minus_production": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "pooled": {
+    "games": 3962,
+    "mae": 11.1692,
+    "corr": 0.4615,
+    "winners": 0.6777,
+    "mae_minus_production": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "game_15": {
+   "2024": {
+    "games": 1319,
+    "mae": 11.1085,
+    "corr": 0.4251,
+    "winners": 0.671,
+    "mae_minus_production": [
+     -0.0653,
+     -0.1636,
+     0.0369
+    ]
+   },
+   "2025": {
+    "games": 1321,
+    "mae": 10.972,
+    "corr": 0.4782,
+    "winners": 0.6813,
+    "mae_minus_production": [
+     0.0668,
+     -0.0232,
+     0.16
+    ]
+   },
+   "2026": {
+    "games": 1322,
+    "mae": 11.4353,
+    "corr": 0.4641,
+    "winners": 0.6815,
+    "mae_minus_production": [
+     0.0069,
+     -0.0982,
+     0.109
+    ]
+   },
+   "pooled": {
+    "games": 3962,
+    "mae": 11.172,
+    "corr": 0.4568,
+    "winners": 0.6779,
+    "mae_minus_production": [
+     0.0028,
+     -0.0534,
+     0.0586
+    ]
+   }
+  },
+  "stint_45": {
+   "2024": {
+    "games": 1319,
+    "mae": 11.151,
+    "corr": 0.4156,
+    "winners": 0.677,
+    "mae_minus_production": [
+     -0.0228,
+     -0.2247,
+     0.1823
+    ]
+   },
+   "2025": {
+    "games": 1321,
+    "mae": 11.1633,
+    "corr": 0.4502,
+    "winners": 0.6722,
+    "mae_minus_production": [
+     0.2582,
+     0.0802,
+     0.4366
+    ]
+   },
+   "2026": {
+    "games": 1322,
+    "mae": 11.6019,
+    "corr": 0.4491,
+    "winners": 0.6717,
+    "mae_minus_production": [
+     0.1735,
+     -0.0304,
+     0.3822
+    ]
+   },
+   "pooled": {
+    "games": 3962,
+    "mae": 11.3056,
+    "corr": 0.4388,
+    "winners": 0.6736,
+    "mae_minus_production": [
+     0.1364,
+     0.0208,
+     0.2504
+    ]
+   }
+  },
+  "stint_prior": {
+   "2024": {
+    "games": 1319,
+    "mae": 11.174,
+    "corr": 0.4363,
+    "winners": 0.6717,
+    "mae_minus_production": [
+     0.0002,
+     -0.046,
+     0.0484
+    ]
+   },
+   "2025": {
+    "games": 1321,
+    "mae": 10.9163,
+    "corr": 0.4881,
+    "winners": 0.6881,
+    "mae_minus_production": [
+     0.0112,
+     -0.0272,
+     0.0498
+    ]
+   },
+   "2026": {
+    "games": 1322,
+    "mae": 11.4209,
+    "corr": 0.4695,
+    "winners": 0.6793,
+    "mae_minus_production": [
+     -0.0075,
+     -0.0438,
+     0.0279
+    ]
+   },
+   "pooled": {
+    "games": 3962,
+    "mae": 11.1705,
+    "corr": 0.4653,
+    "winners": 0.6797,
+    "mae_minus_production": [
+     0.0013,
+     -0.0196,
+     0.0263
+    ]
+   }
+  },
+  "average": {
+   "2024": {
+    "games": 1319,
+    "mae": 11.0354,
+    "corr": 0.437,
+    "winners": 0.6732,
+    "mae_minus_production": [
+     -0.1384,
+     -0.2415,
+     -0.035
+    ]
+   },
+   "2025": {
+    "games": 1321,
+    "mae": 10.9264,
+    "corr": 0.4818,
+    "winners": 0.6851,
+    "mae_minus_production": [
+     0.0213,
+     -0.071,
+     0.1118
+    ]
+   },
+   "2026": {
+    "games": 1322,
+    "mae": 11.4078,
+    "corr": 0.4702,
+    "winners": 0.6793,
+    "mae_minus_production": [
+     -0.0206,
+     -0.1307,
+     0.0858
+    ]
+   },
+   "pooled": {
+    "games": 3962,
+    "mae": 11.1233,
+    "corr": 0.4637,
+    "winners": 0.6792,
+    "mae_minus_production": [
+     -0.0459,
+     -0.1034,
+     0.0124
+    ]
+   }
+  }
+ },
+ "tune": {
+  "game_5": {
+   "games": 8890,
+   "mae": 10.4709,
+   "corr": 0.3772,
+   "winners": 0.646
+  },
+  "game_15": {
+   "games": 8890,
+   "mae": 10.3929,
+   "corr": 0.3798,
+   "winners": 0.6521
+  },
+  "stint_45": {
+   "games": 8890,
+   "mae": 10.3963,
+   "corr": 0.3835,
+   "winners": 0.6611
+  },
+  "stint_prior": {
+   "games": 8890,
+   "mae": 10.4517,
+   "corr": 0.3879,
+   "winners": 0.6526
+  },
+  "average": {
+   "games": 8890,
+   "mae": 10.3464,
+   "corr": 0.3937,
+   "winners": 0.6585
+  }
+ }
+}

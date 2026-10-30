@@ -67,10 +67,14 @@ def paired(y, a, b, n=2000):
     ]
 
 
-def features(reports: pd.DataFrame | None = None) -> pd.DataFrame:
+def features(
+    reports: pd.DataFrame | None = None, ratings: pd.DataFrame | None = None
+) -> pd.DataFrame:
     """Game features as the daily job builds them, with the line and TimesFM.
 
-    ``reports``: the injury report history to use instead of the stored one.
+    ``reports``: the injury report history to use instead of the stored one;
+    ``ratings``: player ratings (month, athlete_id, rating) instead of
+    ``impact.monthly_ratings``.
     """
     from nbapredicts.features import (
         apply_pregame_availability,
@@ -96,7 +100,14 @@ def features(reports: pd.DataFrame | None = None) -> pd.DataFrame:
     )
     feats = apply_impact(
         feats,
-        pregame_impact(pv, pb, games, reports, team_ids, monthly_ratings(pb, games)),
+        pregame_impact(
+            pv,
+            pb,
+            games,
+            reports,
+            team_ids,
+            monthly_ratings(pb, games) if ratings is None else ratings,
+        ),
     )
     feats = feats[feats["status"] == "final"]
     feats = feats.merge(store.load("odds").drop(columns="season"), on="game_id")
