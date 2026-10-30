@@ -106,7 +106,11 @@ def features(
             games,
             reports,
             team_ids,
-            monthly_ratings(pb, games) if ratings is None else ratings,
+            (
+                monthly_ratings(pb, games, store.load("stints"))
+                if ratings is None
+                else ratings
+            ),
         ),
     )
     feats = feats[feats["status"] == "final"]

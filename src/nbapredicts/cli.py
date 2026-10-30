@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> None:
                 {t["name"]: tid for tid, t in teams.items()},
             ),
         )
-        ratings = monthly_ratings(player_box, games)
+        ratings = monthly_ratings(player_box, games, store.load("stints"))
         team_ids = {t["name"]: tid for tid, t in teams.items()}
         feats = apply_impact(
             feats,
