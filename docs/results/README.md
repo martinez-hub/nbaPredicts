@@ -371,9 +371,8 @@ with it, and EQUINE is refit, all else as published. Change in Brier:
 | Logistic | -0.0000 | +0.0000 | -0.0001 | -0.0000 (-0.0002, +0.0001) |
 | EQUINE with the line | -0.0000 | -0.0000 | +0.0000 | -0.0000 (-0.0000, +0.0000) |
 
-A listed player is about one rotation player in a game, and being right
-more often about whether he plays moves the team's expected strength
-little (availability changes 0.4-0.8 on average); the line already prices
+Listed players average one or two a game, and being right more often
+about whether they play moves the team's expected strength little (availability changes 0.4-0.8 on average); the line already prices
 the report. Not deployed: it would mean running the model at every daily
 run for a change inside the noise.
 
