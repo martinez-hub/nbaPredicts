@@ -59,7 +59,7 @@ the NBA CDN). Players on a team's pre-game roster (in its previous 10 games)
 listed Doubtful logged minutes 2.0% of the time, Questionable 52.6%,
 Probable 90.9% (2019-20..2025-26).
 
-Until 2026-10-30 the parser put most players in reports to 2022-23 under
+Until 2026-10-29 the parser put most players in reports to 2022-23 under
 the wrong team: those PDFs' text comes out top-down, newer ones bottom-up,
 and it always read bottom-up, so each player took the team named on the
 row below (LaVine and Caruso under Miami, Bulls at Heat). 23-26% of
@@ -115,7 +115,7 @@ the defaults.
 | 2024-25 | 69.6% / 0.2012 | 69.3% / 0.2012 | 68.5% / 0.2054 | 68.7% / 0.2055 | 64.7% / 0.2185 |
 | 2025-26 | 68.5% / 0.1977 | 68.5% / 0.1974 | 68.5% / 0.2045 | 67.8% / 0.2040 | 67.4% / 0.2110 |
 
-(accuracy / Brier; rerun 2026-10-30 on the fixed injury history). By
+(accuracy / Brier; rerun 2026-10-29 on the fixed injury history). By
 EQUINE's GP-variance tercile the no-line model picked 62.7%, 65.5% and 74.7%
 correctly (most ordinary to rarest), calibration error 0.016, 0.017, 0.031. With the current settings, high variance marks
 rare, mostly lopsided matchups, which are easier to call; with EquineGP's
