@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "fix/refuse-one-class-models",
- "commit": "b0810b67a1e62ebf37416b3761906330019e2c4e",
+ "branch": "fix/gp-whole-number-labels",
+ "commit": "9c7af2f77da389d5437f2b005102364430082a96",
  "prs": [
   236,
   237,
@@ -35,10 +35,12 @@
   277,
   278,
   282,
-  283
+  283,
+  288,
+  292
  ],
  "outside_stack": [
   255
  ],
- "resolved_at": "2026-10-30T16:17:33Z"
+ "resolved_at": "2026-10-31T15:31:14Z"
 }
