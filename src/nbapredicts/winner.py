@@ -1,10 +1,17 @@
-"""Game-winner model: an MLP embedding with EQUINE's Gaussian-process head.
+"""Game-winner model: an embedding network with EQUINE's Gaussian-process head.
 
 ``EquineGP`` turns the embedding into a Laplace-approximated GP over random
 Fourier features. Its mean-field logits already shrink toward 50/50 where the
 GP is unsure; the predictive variance behind that shrinkage is also reported
 (``novelty``: the percentile of a game's GP variance among recent held-out games),
 so the page can flag matchups unlike anything the model was trained on.
+
+The features-only model trains on every game twice, once from each side
+(``mirrored``), and averages a prediction with its mirror's; its embedding is
+a spectral-norm residual network (SNGP's recipe), so distances between games
+survive into the GP and the novelty means what it says. Together they cut
+the no-line Brier by 0.0006 on 2023-24..2025-26 and 0.0017 on 2021-22..2022-23
+(docs/results/README.md, "Representations for EQUINE's GP head").
 """
 
 from __future__ import annotations
@@ -23,6 +30,82 @@ from torch.utils.data import TensorDataset
 from .features import FEATURES
 
 LABELS = ["away", "home"]
+
+# How each feature reads from the away team's side: a home-minus-away
+# difference (or a log-odds) flips sign, a home/away pair swaps, and the rest
+# read the same from either side. A feature without a rule can't be mirrored.
+MIRROR_PAIRS = (
+    ("rest_home", "rest_away"),
+    ("b2b_home", "b2b_away"),
+    ("avail_delta_home", "avail_delta_away"),
+    ("impact_delta_home", "impact_delta_away"),
+)
+MIRROR_SAME = frozenset({"neutral", "playoff", "pace_l_mean", "season_games_min"})
+MIRROR_FLIP = frozenset({"mkt", "s1"})  # the stack's log-odds inputs
+
+
+def mirror_rule(feature: str) -> str:
+    """'flip', 'swap' or 'same'; ValueError for a feature with no rule."""
+    if feature.endswith("_diff") or feature in MIRROR_FLIP:
+        return "flip"
+    if any(feature in pair for pair in MIRROR_PAIRS):
+        return "swap"
+    if feature in MIRROR_SAME:
+        return "same"
+    raise ValueError(f"no mirror rule for feature {feature!r} (winner.py)")
+
+
+def home_side(df: pd.DataFrame) -> pd.Series:
+    """+1 when the listed home team has home court, 0 at a neutral site, -1
+    for a mirrored row (the listed home team is really the away team)."""
+    if "home_side" in df:
+        return df["home_side"].astype(float)
+    return 1.0 - df["neutral"].astype(float)
+
+
+def mirrored(df: pd.DataFrame, features: list[str]) -> pd.DataFrame:
+    """The same games seen from the away team's side, label flipped."""
+    out = df.copy()
+    partner = {a: b for pair in MIRROR_PAIRS for a, b in (pair, pair[::-1])}
+    for f in features:
+        rule = mirror_rule(f)
+        if rule == "flip":
+            out[f] = -df[f]
+        elif rule == "swap":
+            out[f] = df[partner[f]]
+    out["home_side"] = -home_side(df)
+    if "home_win" in df:
+        out["home_win"] = 1 - df["home_win"]
+    return out
+
+
+class SNResMLP(torch.nn.Module):
+    """SNGP's embedding: a free input projection, then a residual block whose
+    branch is spectral-norm bounded (Lipschitz below 1, so the block neither
+    collapses nor stretches distances), then a bounded projection."""
+
+    def __init__(
+        self, d_in: int, width: int, d_out: int, blocks: int = 1, c: float = 0.95
+    ):
+        super().__init__()
+        sn = torch.nn.utils.parametrizations.spectral_norm
+        self.inp = torch.nn.Linear(d_in, width)
+        self.blocks = torch.nn.ModuleList(
+            [sn(torch.nn.Linear(width, width)) for _ in range(blocks)]
+        )
+        self.out = sn(torch.nn.Linear(width, d_out))
+        self.c = c
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = torch.relu(self.inp(x))
+        for b in self.blocks:
+            h = h + self.c * torch.relu(b(h))
+        return self.out(h)
+
+
+# EQUINE saves an embedding as a registered architecture's recipe plus its
+# weights, and rebuilds it from the registry on load.
+eq.register_embedding_architecture("nbapredicts.sn_residual_mlp", SNResMLP)
 
 
 @dataclass
@@ -50,6 +133,11 @@ class WinnerConfig:
     # which discards the magnitude of a low-dimensional input (a stacked
     # log-odds). Off for the market stack; not stored in EQUINE's checkpoint.
     normalize_gp_features: bool = False
+    # Train on every game from both sides and average each prediction with
+    # its mirror's, and embed with SNResMLP (scripts/representation.py chose
+    # both; the market stack keeps a plain MLP without mirroring).
+    mirror: bool = True
+    encoder: str = "snres"  # "snres" or "mlp" (eq.MLP)
     seed: int = 0
 
 
@@ -61,10 +149,11 @@ class WinnerModel:
     var_reference: np.ndarray  # sorted GP variances of held-out games
     features: list[str]
     epochs_trained: int = 0
+    mirror: bool = False
 
     # ----------------------------------------------------------------------
     def _x(self, df: pd.DataFrame) -> torch.Tensor:
-        x = df[self.features].to_numpy(dtype=np.float64)
+        x = _raw(df, self.features, self.mirror)
         x = np.nan_to_num((x - self.mean) / self.std)
         return torch.tensor(x, dtype=torch.float32)
 
@@ -80,9 +169,15 @@ class WinnerModel:
         out = self.model.predict(self._x(df))
         var = self._variance(out.embeddings)
         novelty = np.searchsorted(self.var_reference, var) / len(self.var_reference)
+        p_home = out.classes[:, 1].cpu().numpy()
+        if self.mirror:
+            # The same game from the away side should give the other team's
+            # chance; averaging the two makes the prediction symmetric.
+            back = self.model.predict(self._x(mirrored(df, self.features)))
+            p_home = (p_home + 1 - back.classes[:, 1].cpu().numpy()) / 2
         return pd.DataFrame(
             {
-                "p_home": out.classes[:, 1].cpu().numpy(),
+                "p_home": p_home,
                 "gp_var": var,
                 "novelty": novelty,
             },
@@ -100,6 +195,7 @@ class WinnerModel:
             "var_reference": self.var_reference.tolist(),
             "mean_field_factor": self.model.model.mean_field_factor,
             "normalize_gp_features": self.model.model.normalize_gp_features,
+            "mirror": self.mirror,
         }
         (directory / "winner_meta.json").write_text(json.dumps(meta))
 
@@ -118,7 +214,17 @@ class WinnerModel:
             std=np.array(meta["std"]),
             var_reference=np.array(meta["var_reference"]),
             features=meta["features"],
+            mirror=meta.get("mirror", False),
         )
+
+
+def _raw(df: pd.DataFrame, features: list[str], mirror: bool) -> np.ndarray:
+    """The model's input columns, unscaled: the features, plus which side has
+    home court for a mirrored model."""
+    x = df[features].to_numpy(dtype=np.float64)
+    if mirror:
+        x = np.column_stack([x, home_side(df).to_numpy(dtype=np.float64)])
+    return x
 
 
 def fit(
@@ -136,29 +242,38 @@ def fit(
     fit_df, calib_df = train.iloc[:-n_calib], train.iloc[-n_calib:]
 
     features = list(features or FEATURES)
-    x_all = fit_df[features].to_numpy(dtype=np.float64)
+    if config.mirror:
+        # Mirrored copies of the training games only: the held-out newest
+        # games, which steer early stopping and calibration, stay as played.
+        fit_df = fit_df.assign(home_side=home_side(fit_df))
+        fit_df = pd.concat([fit_df, mirrored(fit_df, features)], ignore_index=True)
+    x_all = _raw(fit_df, features, config.mirror)
     mean = np.nanmean(x_all, axis=0)
     std = np.nanstd(x_all, axis=0)
     std[std == 0] = 1.0
 
-    embedding = eq.MLP(
-        in_features=len(features),
-        hidden_sizes=list(config.hidden),
-        out_features=config.emb_dim,
-    )
+    names = [*features, "home_side"] if config.mirror else features
+    if config.encoder == "snres":
+        embedding = SNResMLP(len(names), config.hidden[0], config.emb_dim)
+    else:
+        embedding = eq.MLP(
+            in_features=len(names),
+            hidden_sizes=list(config.hidden),
+            out_features=config.emb_dim,
+        )
     model = eq.EquineGP(
         embedding,
         emb_out_dim=config.emb_dim,
         num_classes=2,
         num_random_features=config.random_features,
-        feature_names=features,
+        feature_names=names,
         label_names=LABELS,
     )
     model.mean_field_factor = config.mean_field_factor
     model.model.mean_field_factor = config.mean_field_factor
     model.normalize_gp_features = config.normalize_gp_features
     model.model.normalize_gp_features = config.normalize_gp_features
-    wm = WinnerModel(model, mean, std, np.array([0.0]), features)
+    wm = WinnerModel(model, mean, std, np.array([0.0]), features, mirror=config.mirror)
 
     def dataset(df: pd.DataFrame) -> TensorDataset:
         y = torch.tensor(df["home_win"].to_numpy(), dtype=torch.long)
