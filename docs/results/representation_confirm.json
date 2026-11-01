@@ -1,0 +1,378 @@
+{
+ "seeds": {
+  "features_only": {
+   "pairs": [
+    0.00093,
+    0.00097,
+    0.00073,
+    0.00031,
+    4e-05,
+    -0.0002,
+    -0.00062,
+    -0.00024,
+    -0.00066,
+    -0.00042
+   ],
+   "floor": 0.00097
+  }
+ },
+ "arms": {
+  "base": {
+   "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ],
+   "brier": 0.22037,
+   "log_loss": 0.63173,
+   "accuracy": 0.6519,
+   "ece": 0.0354,
+   "minus_base_by_seed": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "minus_base_seed_avg": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "minus_logistic_seed_avg": [
+    0.00129,
+    -8e-05,
+    0.00258
+   ],
+   "minus_base_by_season": {
+    "2022": 0.0,
+    "2023": 0.0
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6266,
+     "brier": 0.2285,
+     "ece": 0.0239
+    },
+    {
+     "accuracy": 0.6549,
+     "brier": 0.22,
+     "ece": 0.0404
+    },
+    {
+     "accuracy": 0.6765,
+     "brier": 0.2154,
+     "ece": 0.0534
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.435,
+   "shifted_auroc": 0.981
+  },
+  "lineup": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "brier": 0.22133,
+   "log_loss": 0.63384,
+   "accuracy": 0.6462,
+   "ece": 0.034,
+   "minus_base_by_seed": [
+    -0.00013,
+    0.00051,
+    0.00278
+   ],
+   "minus_base_seed_avg": [
+    0.00099,
+    -0.00053,
+    0.00249
+   ],
+   "minus_logistic_seed_avg": [
+    0.00225,
+    0.0002,
+    0.00412
+   ],
+   "minus_base_by_season": {
+    "2022": 3e-05,
+    "2023": 0.00196
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6459,
+     "brier": 0.2254,
+     "ece": 0.0406
+    },
+    {
+     "accuracy": 0.6493,
+     "brier": 0.2251,
+     "ece": 0.058
+    },
+    {
+     "accuracy": 0.6652,
+     "brier": 0.2131,
+     "ece": 0.0431
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.307,
+   "shifted_auroc": 0.999
+  },
+  "mirror_sym+snres": {
+   "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ],
+   "brier": 0.21866,
+   "log_loss": 0.62784,
+   "accuracy": 0.6648,
+   "ece": 0.0339,
+   "minus_base_by_seed": [
+    -0.00219,
+    -0.00143,
+    -0.00163,
+    -0.00186,
+    -0.0022
+   ],
+   "minus_base_seed_avg": [
+    -0.00171,
+    -0.00275,
+    -0.00071
+   ],
+   "minus_logistic_seed_avg": [
+    -0.00042,
+    -0.00139,
+    0.00065
+   ],
+   "minus_base_by_season": {
+    "2022": -0.00063,
+    "2023": -0.00278
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.63,
+     "brier": 0.2302,
+     "ece": 0.0295
+    },
+    {
+     "accuracy": 0.6538,
+     "brier": 0.2198,
+     "ece": 0.0309
+    },
+    {
+     "accuracy": 0.6981,
+     "brier": 0.2073,
+     "ece": 0.0612
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.568,
+   "shifted_auroc": 0.993
+  },
+  "mirror_sym": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "brier": 0.21878,
+   "log_loss": 0.62825,
+   "accuracy": 0.6606,
+   "ece": 0.0298,
+   "minus_base_by_seed": [
+    -0.00227,
+    -0.00142,
+    -0.00172
+   ],
+   "minus_base_seed_avg": [
+    -0.00155,
+    -0.00253,
+    -0.00067
+   ],
+   "minus_logistic_seed_avg": [
+    -0.0003,
+    -0.00127,
+    0.00074
+   ],
+   "minus_base_by_season": {
+    "2022": -0.00067,
+    "2023": -0.00244
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6311,
+     "brier": 0.2289,
+     "ece": 0.0353
+    },
+    {
+     "accuracy": 0.6538,
+     "brier": 0.2266,
+     "ece": 0.0451
+    },
+    {
+     "accuracy": 0.6924,
+     "brier": 0.2016,
+     "ece": 0.036
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.535,
+   "shifted_auroc": 0.99
+  },
+  "seq": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "brier": 0.21861,
+   "log_loss": 0.62728,
+   "accuracy": 0.6496,
+   "ece": 0.0249,
+   "minus_base_by_seed": [
+    -0.00221,
+    -0.00133,
+    -0.00189
+   ],
+   "minus_base_seed_avg": [
+    -0.00172,
+    -0.00365,
+    0.00033
+   ],
+   "minus_logistic_seed_avg": [
+    -0.00047,
+    -0.00205,
+    0.00117
+   ],
+   "minus_base_by_season": {
+    "2022": -0.00116,
+    "2023": -0.00228
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6266,
+     "brier": 0.229,
+     "ece": 0.0267
+    },
+    {
+     "accuracy": 0.6277,
+     "brier": 0.2305,
+     "ece": 0.0346
+    },
+    {
+     "accuracy": 0.7026,
+     "brier": 0.1978,
+     "ece": 0.0232
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.652,
+   "shifted_auroc": 0.989
+  },
+  "snres": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "brier": 0.21968,
+   "log_loss": 0.63035,
+   "accuracy": 0.6591,
+   "ece": 0.0395,
+   "minus_base_by_seed": [
+    -0.00174,
+    -0.00048,
+    0.00054
+   ],
+   "minus_base_seed_avg": [
+    -0.00065,
+    -0.00138,
+    6e-05
+   ],
+   "minus_logistic_seed_avg": [
+    0.0006,
+    -0.00072,
+    0.0019
+   ],
+   "minus_base_by_season": {
+    "2022": 9e-05,
+    "2023": -0.00139
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6288,
+     "brier": 0.2309,
+     "ece": 0.0321
+    },
+    {
+     "accuracy": 0.6731,
+     "brier": 0.2227,
+     "ece": 0.0575
+    },
+    {
+     "accuracy": 0.6901,
+     "brier": 0.2052,
+     "ece": 0.0568
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.621,
+   "shifted_auroc": 0.996
+  },
+  "mix:mirror_sym+snres+lineup+seq": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "brier": 0.21857,
+   "log_loss": 0.62761,
+   "accuracy": 0.6595,
+   "ece": 0.029,
+   "minus_base_by_seed": [
+    -0.00286,
+    -0.00179,
+    -0.00149
+   ],
+   "minus_base_seed_avg": [
+    -0.00176,
+    -0.00248,
+    -0.00104
+   ],
+   "minus_logistic_seed_avg": [
+    -0.00051,
+    -0.00145,
+    0.00042
+   ],
+   "minus_base_by_season": {
+    "2022": -0.00139,
+    "2023": -0.00214
+   },
+   "by_novelty": [
+    {
+     "accuracy": 0.6254,
+     "brier": 0.23,
+     "ece": 0.0385
+    },
+    {
+     "accuracy": 0.6515,
+     "brier": 0.2257,
+     "ece": 0.0564
+    },
+    {
+     "accuracy": 0.6935,
+     "brier": 0.1997,
+     "ece": 0.0195
+    }
+   ],
+   "var_vs_nn_distance_spearman": 0.535,
+   "shifted_auroc": 0.99
+  }
+ },
+ "base_brier": {
+  "features_only": 0.22037
+ },
+ "logistic_brier": {
+  "features_only": 0.21908
+ }
+}
