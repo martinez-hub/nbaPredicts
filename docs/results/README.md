@@ -442,6 +442,59 @@ averages them. The package code rebuilds the experiment's 532,181 stints
 exactly and its ratings to 3e-14, and the published backtest moved as the
 experiment did (above).
 
+## Representations for EQUINE's GP head
+
+`scripts/representation.py`, results in `representation.json`
+(2023-24..2025-26) and `representation_confirm.json` (2021-22 and 2022-23,
+not used to choose). A logistic regression on the 28 features tied the
+features-only EQUINE, so its MLP embedding found nothing nonlinear. Each arm
+changes only how the GP head's input is learned, through one training loop
+that gives the production `winner.fit` predictions exactly for the baseline
+(newest 8% of games held out for early stopping, temperature and the novelty
+scale; a mirrored copy never enters that 8%). Training is stochastic, so
+every arm ran on three seeds (five for the finalist on the confirmation
+seasons); the baseline's seed-to-seed spread, the noise floor, is 0.0002
+Brier on the main seasons and 0.0010 on the confirmation seasons.
+Uncertainty: Spearman correlation of each game's GP variance with its
+distance to the nearest training game (what the novelty flag should track).
+
+| Arm | Change in Brier, 2023-24..2025-26 (95%) | Variance vs distance |
+|---|---|---|
+| Current features-only EQUINE (Brier 0.2049) | | 0.48 |
+| Mirror: each training game also from the away side, predictions averaged over both | -0.0004 (-0.0009, +0.0002) | 0.44 |
+| Spectral-norm residual encoder (SNGP's recipe) | +0.0003 (-0.0002, +0.0008) | 0.53 |
+| **Mirror + spectral norm** | **-0.0006 (-0.0012, +0.0000)** | **0.57** |
+| Margin pretraining, fine-tuned / frozen | +0.0006 (+0.0003, +0.0009) / +0.0003 (-0.0005, +0.0010) | 0.31 / 0.48 |
+| Whole-outcome pretraining (14 box-score targets), fine-tuned / frozen | +0.0006 (+0.0002, +0.0010) / +0.0014 (+0.0006, +0.0024) | 0.28 / 0.36 |
+| JEPA over the features (mask feature groups), fine-tuned / frozen | +0.0008 (+0.0003, +0.0012) / +0.0225 | 0.21 / 0.15 |
+| Lineup encoder (Deep Sets over each expected rotation) | +0.0004 (-0.0008, +0.0016) | 0.45 |
+| Sequence encoder (GRU over each team's last 10 game lines), instead of / with the summaries | +0.0007 (-0.0006, +0.0019) / +0.0006 (+0.0001, +0.0010) | 0.60 / 0.39 |
+| Temporal JEPA on those sequences, fine-tuned / frozen | +0.0009 (-0.0004, +0.0022) / +0.0017 (+0.0003, +0.0032) | 0.51 / 0.44 |
+| Mix: mirror, spectral norm, lineup and sequence models averaged | -0.0005 (-0.0010, +0.0000) | |
+
+Mirror combined with the lineup, sequence, margin or outcome arms gave
+-0.0002 to -0.0003. Mirror + spectral norm was better on every seed
+(-0.0007, -0.0003, -0.0007). On the confirmation seasons it is -0.0017
+(-0.0028, -0.0007), better on all five seeds (-0.0014 to -0.0022), with
+variance-distance correlation 0.57 (current 0.44); mirror alone -0.0016
+(-0.0025, -0.0006). Against the logistic: the current model ties it on the
+main seasons and was worse on the confirmation seasons (+0.0013); mirror +
+spectral norm is -0.0006 (-0.0013, +0.0001) and -0.0004 (-0.0014, +0.0007).
+The mix of four is no better than mirror + spectral norm alone.
+
+With the line (the stack head), every arm is within the seed floor: mirror +
+spectral norm -0.00001 (-0.0003, +0.0003).
+
+So with about 15,000 games, richer targets and learned or self-supervised
+encoders do not beat the 28 summaries; what helps is how the head is trained:
+the game's symmetry (which doubles the data) and an encoder that keeps
+distances. The gain is larger with less training data (the older
+confirmation seasons). It would improve the features-only pick (the live
+fallback) and the novelty flag, not the published pick. Not deployed: the
+spectral-norm encoder is not an `eq.MLP`, so `WinnerModel.save`/`load` would
+have to carry it (or EquineGP could offer spectral normalization itself; its
+docstring notes it does not enforce it).
+
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
