@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "fix/gp-whole-number-labels",
- "commit": "9c7af2f77da389d5437f2b005102364430082a96",
+ "branch": "perf/protonet-outlier-grid",
+ "commit": "d9b11d044aabce9b4b26792e57a5e076f4170122",
  "prs": [
   236,
   237,
@@ -37,10 +37,16 @@
   282,
   283,
   288,
-  292
+  292,
+  295,
+  299,
+  300,
+  301,
+  302,
+  303
  ],
  "outside_stack": [
   255
  ],
- "resolved_at": "2026-10-31T15:31:14Z"
+ "resolved_at": "2026-11-01T16:27:54Z"
 }
