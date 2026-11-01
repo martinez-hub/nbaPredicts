@@ -571,8 +571,12 @@ def daily(
     # Written by scripts/equine_stack_tip.py alongside the pyproject pin.
     stack = json.loads((root / "equine_stack.json").read_text())
     cfg = config or WinnerConfig()
-    widths = [len(MODEL_FEATURES), *cfg.hidden, cfg.emb_dim]
-    embedding_desc = "MLP " + "→".join(map(str, widths))
+    widths = [len(MODEL_FEATURES) + cfg.mirror, *cfg.hidden, cfg.emb_dim]
+    embedding_desc = (
+        "spectral-norm residual MLP " if cfg.encoder == "snres" else "MLP "
+    ) + "→".join(map(str, widths))
+    if cfg.mirror:
+        embedding_desc += ", trained on each game from both sides"
     finals = games[games["status"] == "final"]
     payload = {
         "generated_at": stamp,

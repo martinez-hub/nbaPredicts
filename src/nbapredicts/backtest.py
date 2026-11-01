@@ -100,8 +100,15 @@ def backtest_winner(
         pred = wm.predict(test)
         y = test["home_win"].to_numpy()
 
-        x_train = np.nan_to_num((train[cols].to_numpy() - wm.mean) / wm.std)
-        x_test = np.nan_to_num((test[cols].to_numpy() - wm.mean) / wm.std)
+        # The logistic baseline scales the features as fit() does for an
+        # unmirrored model: by the training games before the held-out newest.
+        cfg = config or WinnerConfig()
+        held = max(1, int(len(train) * cfg.calib_frac))
+        scale = train.sort_values("start").iloc[:-held][cols].to_numpy(dtype=float)
+        mean, std = np.nanmean(scale, axis=0), np.nanstd(scale, axis=0)
+        std[std == 0] = 1.0
+        x_train = np.nan_to_num((train[cols].to_numpy() - mean) / std)
+        x_test = np.nan_to_num((test[cols].to_numpy() - mean) / std)
         logit = LogisticRegression(C=1.0, max_iter=2000).fit(
             x_train, train["home_win"].to_numpy()
         )
