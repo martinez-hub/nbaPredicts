@@ -463,18 +463,20 @@ distance to the nearest training game (what the novelty flag should track).
 | Current features-only EQUINE (Brier 0.2049) | | 0.48 |
 | Mirror: each training game also from the away side, predictions averaged over both | -0.0004 (-0.0009, +0.0002) | 0.44 |
 | Spectral-norm residual encoder (SNGP's recipe) | +0.0003 (-0.0002, +0.0008) | 0.53 |
-| **Mirror + spectral norm** | **-0.0006 (-0.0012, +0.0000)** | **0.57** |
+| **Mirror + spectral norm** | **-0.0006 (-0.0012, +0.00002)** | **0.57** |
 | Margin pretraining, fine-tuned / frozen | +0.0006 (+0.0003, +0.0009) / +0.0003 (-0.0005, +0.0010) | 0.31 / 0.48 |
 | Whole-outcome pretraining (14 box-score targets), fine-tuned / frozen | +0.0006 (+0.0002, +0.0010) / +0.0014 (+0.0006, +0.0024) | 0.28 / 0.36 |
 | JEPA over the features (mask feature groups), fine-tuned / frozen | +0.0008 (+0.0003, +0.0012) / +0.0225 | 0.21 / 0.15 |
 | Lineup encoder (Deep Sets over each expected rotation) | +0.0004 (-0.0008, +0.0016) | 0.45 |
 | Sequence encoder (GRU over each team's last 10 game lines), instead of / with the summaries | +0.0007 (-0.0006, +0.0019) / +0.0006 (+0.0001, +0.0010) | 0.60 / 0.39 |
 | Temporal JEPA on those sequences, fine-tuned / frozen | +0.0009 (-0.0004, +0.0022) / +0.0017 (+0.0003, +0.0032) | 0.51 / 0.44 |
-| Mix: mirror, spectral norm, lineup and sequence models averaged | -0.0005 (-0.0010, +0.0000) | |
+| Mix: mirror, spectral norm, lineup and sequence models averaged | -0.0005 (-0.0010, +0.00004) | |
 
 Mirror combined with the lineup, sequence, margin or outcome arms gave
 -0.0002 to -0.0003. Mirror + spectral norm was better on every seed
-(-0.0007, -0.0003, -0.0007). On the confirmation seasons it is -0.0017
+(-0.0007, -0.0003, -0.0007), but it was chosen from about 20 arms on these
+seasons and its interval touches zero, so the confirmation seasons, run
+after choosing, are the test. There it is -0.0017
 (-0.0028, -0.0007), better on all five seeds (-0.0014 to -0.0022), with
 variance-distance correlation 0.57 (current 0.44); mirror alone -0.0016
 (-0.0025, -0.0006). Against the logistic: the current model ties it on the
