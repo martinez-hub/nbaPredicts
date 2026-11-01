@@ -40,6 +40,9 @@ STACK_CONFIG = WinnerConfig(
     weight_decay=1e-3,
     mean_field_factor=0.39269908169872414,  # pi / 8
     normalize_gp_features=False,
+    # Neither helped next to the line (scripts/representation.py).
+    mirror=False,
+    encoder="mlp",
 )
 
 

@@ -3,9 +3,11 @@
 Daily NBA predictions for the [NBA tab](https://martinez-hub.github.io/nba.html)
 of martinez-hub.github.io:
 
-- **Who wins**: an MLP embedding with EQUINE's Gaussian-process head
-  (`EquineGP`) gives a calibrated home-win probability and a measure of how
-  unfamiliar the matchup is to the model.
+- **Who wins**: EQUINE's Gaussian-process head (`EquineGP`) on a learned
+  embedding gives a calibrated home-win probability and a measure of how
+  unfamiliar the matchup is to the model. With a betting line it is stacked
+  on the line; without one, a spectral-norm embedding trained on each game
+  from both sides.
 - **By how much, and who scores**: Google's TimesFM 2.5 forecasts each team's
   points and each rotation player's points, rebounds, assists and threes, with
   an in-context regression on home/away, opponent defense and rest (XReg).

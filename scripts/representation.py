@@ -57,6 +57,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+from nbapredicts.winner import SNResMLP  # the deployed encoder
+
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "cache.nosync/repr"
 PREDS = WORK / "preds"
@@ -291,30 +293,6 @@ def mirrored(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 # --------------------------------------------------------------------------
 # encoders
 # --------------------------------------------------------------------------
-
-
-class SNResMLP(torch.nn.Module):
-    """SNGP's embedding: a free input projection, then residual blocks whose
-    branch is spectral-norm bounded (Lipschitz < 1, so the block neither
-    collapses nor stretches distances), then a bounded projection."""
-
-    def __init__(
-        self, d_in: int, width: int, d_out: int, blocks: int = 1, c: float = 0.95
-    ):
-        super().__init__()
-        sn = torch.nn.utils.parametrizations.spectral_norm
-        self.inp = torch.nn.Linear(d_in, width)
-        self.blocks = torch.nn.ModuleList(
-            [sn(torch.nn.Linear(width, width)) for _ in range(blocks)]
-        )
-        self.out = sn(torch.nn.Linear(width, d_out))
-        self.c = c
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = torch.relu(self.inp(x))
-        for b in self.blocks:
-            h = h + self.c * torch.relu(b(h))
-        return self.out(h)
 
 
 class DeepSets(torch.nn.Module):

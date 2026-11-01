@@ -113,15 +113,14 @@ the defaults.
 
 | Season | EQUINE with the line | Closing line | EQUINE, no line | Logistic | Elo |
 |---|---|---|---|---|---|
-| 2023-24 | 68.8% / 0.2002 | 68.9% / 0.1993 | 67.1% / 0.2070 | 66.1% / 0.2061 | 64.4% / 0.2182 |
-| 2024-25 | 69.5% / 0.2012 | 69.3% / 0.2012 | 69.0% / 0.2045 | 68.6% / 0.2045 | 64.7% / 0.2185 |
-| 2025-26 | 68.5% / 0.1978 | 68.5% / 0.1974 | 67.6% / 0.2040 | 67.9% / 0.2040 | 67.4% / 0.2110 |
+| 2023-24 | 68.8% / 0.2002 | 68.9% / 0.1993 | 67.0% / 0.2058 | 66.2% / 0.2061 | 64.4% / 0.2182 |
+| 2024-25 | 69.5% / 0.2012 | 69.3% / 0.2012 | 69.2% / 0.2040 | 68.6% / 0.2045 | 64.7% / 0.2185 |
+| 2025-26 | 68.5% / 0.1978 | 68.5% / 0.1974 | 68.5% / 0.2029 | 67.8% / 0.2040 | 67.4% / 0.2110 |
 
-(accuracy / Brier; rerun 2026-10-30 with the stint ratings, below; the
-day before, on game-level ratings alone, EQUINE without the line had
-0.2081 / 0.2054 / 0.2045 and with it 0.2001 / 0.2012 / 0.1977). By
-EQUINE's GP-variance tercile the no-line model picked 62.9%, 65.7% and 75.0%
-correctly (most ordinary to rarest), calibration error 0.024, 0.031, 0.031. With the current settings, high variance marks
+(accuracy / Brier; rerun 2026-11-01 with the mirrored, spectral-norm
+features-only model, below; on 2026-10-30, before it, EQUINE without the line
+had 0.2070 / 0.2045 / 0.2040). By EQUINE's GP-variance tercile the no-line model picked 61.7%, 66.9% and 76.1%
+correctly (most ordinary to rarest), calibration error 0.030, 0.024, 0.034. With the current settings, high variance marks
 rare, mostly lopsided matchups, which are easier to call; with EquineGP's
 defaults (LayerNorm, mean-field 25) the order had been reversed (75/65/60%).
 
@@ -491,11 +490,22 @@ So with about 15,000 games, richer targets and learned or self-supervised
 encoders do not beat the 28 summaries; what helps is how the head is trained:
 the game's symmetry (which doubles the data) and an encoder that keeps
 distances. The gain is larger with less training data (the older
-confirmation seasons). It would improve the features-only pick (the live
-fallback) and the novelty flag, not the published pick. Not deployed: the
-spectral-norm encoder is not an `eq.MLP`, so `WinnerModel.save`/`load` would
-have to carry it (or EquineGP could offer spectral normalization itself; its
-docstring notes it does not enforce it).
+confirmation seasons). It improves the features-only pick (the live
+fallback) and the novelty flag, not the published pick.
+
+Deployed 2026-11-01 for the features-only model (`WinnerConfig` defaults:
+`mirror=True`, `encoder="snres"`; the stack keeps a plain MLP). `winner.fit`
+mirrors the training games after holding out the newest 8%, and
+`WinnerModel.predict` averages each game with its mirror. The encoder is
+registered with EQUINE's architecture registry
+(`nbapredicts.sn_residual_mlp`), so `save`/`load` rebuild it from its recipe;
+reloaded predictions are identical. The production code reproduces the
+experiment's finalist exactly (difference 0.0) and leaves the stack's
+predictions unchanged; one training run on all games takes 18 s against 21 s
+before. Every feature needs a mirror rule (`winner.mirror_rule`), and a test
+fails for one without. On the page, the rare-matchup flag (novelty 0.9 or
+more) now comes from this model: about 11% of games either way, but the two
+models agree on only 40-45% of the flagged games.
 
 ## Where this leaves "beating the market"
 
