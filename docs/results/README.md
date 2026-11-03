@@ -510,7 +510,7 @@ models agree on only 40-45% of the flagged games.
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
-not, with every input tried so far. Remaining candidates from
-docs/research_plan.md: a text model over the logged news (the injury
+not, with every input tried so far. Remaining candidates: a text model
+over the logged news (the injury
 reports' reasons added nothing, above), and live grading against the line
 at prediction time, which the prediction log now records.
