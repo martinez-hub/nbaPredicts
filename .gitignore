@@ -10,3 +10,5 @@ cache.nosync/
 logs/
 # Retrained every run from data/; not worth a binary blob per day in history.
 models/
+# The research plan stays private: kept locally, out of the public repo.
+docs/research_plan.md
