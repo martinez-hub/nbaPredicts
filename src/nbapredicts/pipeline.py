@@ -571,12 +571,11 @@ def daily(
     # Written by scripts/equine_stack_tip.py alongside the pyproject pin.
     stack = json.loads((root / "equine_stack.json").read_text())
     cfg = config or WinnerConfig()
+    # A noun phrase the page sets inside a sentence; mirroring is its own flag.
     widths = [len(MODEL_FEATURES) + cfg.mirror, *cfg.hidden, cfg.emb_dim]
     embedding_desc = (
-        "spectral-norm residual MLP " if cfg.encoder == "snres" else "MLP "
+        "spectrally normalized residual layers, " if cfg.encoder == "snres" else "MLP "
     ) + "→".join(map(str, widths))
-    if cfg.mirror:
-        embedding_desc += ", trained on each game from both sides"
     finals = games[games["status"] == "final"]
     payload = {
         "generated_at": stamp,
@@ -598,6 +597,7 @@ def daily(
                 "prs": stack["prs"],
                 "head": "EquineGP: Laplace GP over random Fourier features",
                 "embedding": embedding_desc,
+                "mirrored": cfg.mirror,
                 "features": MODEL_FEATURES,
                 "trained_on": int(len(train)),
                 "stacked": {
