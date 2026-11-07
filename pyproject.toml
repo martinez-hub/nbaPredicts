@@ -8,7 +8,7 @@ dependencies = [
     # Tip of the open-PR stack #236 -> #263 on mit-ll-responsible-ai/equine
     # (branch maint/python-311-syntax). Pinned by SHA: the stack's branches
     # are force-pushed as it is rebased. Bump with scripts/equine_stack_tip.py.
-    "equine @ git+https://github.com/mit-ll-responsible-ai/equine.git@75cb8a3922d87b10e010302ede73f9b5ecd4d3e0",
+    "equine @ git+https://github.com/mit-ll-responsible-ai/equine.git@476d41fb0a7e4864f2d754c172c35d24dcbfb472",
     "timesfm[torch]==3.0.2",
     "torch>=2.14.1",
     "numpy>=2.0",
