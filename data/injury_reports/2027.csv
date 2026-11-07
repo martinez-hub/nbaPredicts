@@ -1686,37 +1686,102 @@ Houston Rockets,"Capela, Clint",Out,Injury/Illness-Right Ankle Sprain,2026-11-07
 Houston Rockets,"Copeland, Quadir",Out,G League -Two-Way,2026-11-07,2026-11-06,2026-11-06 17:45,2027
 Houston Rockets,"Phillips,Julian",Out,G League -Two-Way,2026-11-07,2026-11-06,2026-11-06 17:45,2027
 Houston Rockets,"Thornton, Bruce",Out,G League -On Assignment,2026-11-07,2026-11-06,2026-11-06 17:45,2027
-Denver Nuggets,"DeRozan, DeMar",Probable,Injury/Illness -Low Back Spasms,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Denver Nuggets,"Strawther, Julian",Out,Injury/Illness -Left Knee Sprain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Indiana Pacers,"Furphy, Johnny",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Indiana Pacers,"Haliburton, Tyrese",Out,Injury/Illness -Left Hamstring Strain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Indiana Pacers,"McConnell, T.J.",Questionable,Injury/Illness -Right Hamstring Strain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Indiana Pacers,"Jr.,Kelly",Questionable,Injury/Illness -Left CalfContusion,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Indiana Pacers,"Sheppard, Ben",Out,Injury/Illness -Left Meniscus Surgery,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Bilodeau, Tyler",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Clowney, Noah",Questionable,Injury/Illness -Illness,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Demin, Egor",Out,Injury/Illness -Right Bone Bruise,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Jefferson, Joshua",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Nelson, Grant",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Powell, Drake",Available,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Brooklyn Nets,"Saraf,Ben",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-New York Knicks,"Hart, Josh",Out,Injury/Illness -Right Ankle Soreness,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Orlando Magic,"Banchero, Paolo",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Orlando Magic,"Isaac, Jonathan",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Orlando Magic,"Nelson, Izaiyah",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Orlando Magic,"Penda, Noah",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Orlando Magic,"Suggs, Jalen",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"III,Jimmy",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"Green, Draymond",Questionable,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"Moody, Moses",Out,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"II,Gary",Questionable,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"Porzingis, Kristaps",Out,Not With Team,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Golden State Warriors,"Santos, Gui",Questionable,Injury/Illness -Left Knee Tendinitis,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Houston Rockets,"Adams, Steven",Out,Injury/Illness -Right Soleus Strain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Houston Rockets,"Capela, Clint",Out,Injury/Illness-Right Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Houston Rockets,"Copeland, Quadir",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Houston Rockets,"Phillips,Julian",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Houston Rockets,"Thornton, Bruce",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Phoenix Suns,"Fleming, Rasheer",Questionable,Injury/Illness-LeftAnkle Sprain,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Phoenix Suns,"Goodwin, Jordan",Doubtful,,2026-11-07,2026-11-07,2026-11-07 12:45,2027
-Phoenix Suns,"Williams, Mark",Out,Injury/Illness-LeftShoulder Surgery,2026-11-07,2026-11-07,2026-11-07 12:45,2027
+Denver Nuggets,"DeRozan, DeMar",Available,Injury/Illness -Low Back Spasms,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Denver Nuggets,"Strawther, Julian",Out,Injury/Illness -Left Knee Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Indiana Pacers,"Furphy, Johnny",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Indiana Pacers,"Haliburton, Tyrese",Out,Injury/Illness -Left Hamstring Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Indiana Pacers,"McConnell, T.J.",Available,Injury/Illness -Right Hamstring Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Indiana Pacers,"Jr.,Kelly",Available,Injury/Illness -Left Calf Contusion,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Indiana Pacers,"Sheppard, Ben",Out,Injury/Illness -Left Meniscus Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Bilodeau, Tyler",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Clowney, Noah",Questionable,Injury/Illness -Illness,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Demin, Egor",Out,Injury/Illness -Right Bone Bruise,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Jefferson, Joshua",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Nelson, Grant",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Powell, Drake",Available,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Brooklyn Nets,"Saraf, Ben",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Dennis, RayJ",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Gilbert, Keshon",Out,Inflammation/Non-Surgical,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Gueye, Mouhamed",Out,Injury/Illness -Left Foot Fracture,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Johnson, Jalen",Available,Injury/Illness -Left Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Landale, Jock",Out,Injury/Illness -Left Hip Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Newell, Asa",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Veesaar, Henri",Out,Injury/Illness -Right ACL Tear,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Atlanta Hawks,"Wilson, Jalen",Available,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+New York Knicks,"Hart, Josh",Out,Injury/Illness -Right Ankle Soreness,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Allen, Jarrett",Out,Injury/Illness -Right Knee Contusion,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Diop, Khalifa",Out,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Enaruna, Tristan",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Merrill, Sam",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Tomlin, Nae'Qwan",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Tyson, Jaylon",Out,Injury/Illness -Right Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Cleveland Cavaliers,"Udeh, Jr.,Ernest",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Beekman, Reece",Out,Injury/Illness -Right AC Joint Injury,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Champagnie, Justin",Out,Injury/Illness -Right Foot Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Davis, Anthony",Questionable,Injury/Illness -Right Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Okpara, Felix",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Vukcevic, Tristan",Out,Injury/Illness - Left Hip Impingement,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Washington Wizards,"Watkins, Jamir",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Holmgren, Chet",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Sorber, Thomas",Out,Injury/Illness - Right Knee Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Topic, Nikola",Out,G League - On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Wallace, Cason",Out,Injury/Illness - Left Shoulder Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Williams, Jalen",Out,Injury/Illness - Left Ankle Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Oklahoma City Thunder,"Williams, Jaylin",Out,Injury/Illness - Low Back Spasms,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Banchero, Paolo",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Bane, Desmond",Out,Injury/Illness - Illness,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Isaac, Jonathan",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Nelson, Izaiyah",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Penda, Noah",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Orlando Magic,"Suggs, Jalen",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"III,Jimmy",Out,Injury/Illness - Right ACL Repair /,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"Green, Draymond",Questionable,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"Moody, Moses",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"II,Gary",Questionable,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"Porzingis, Kristaps",Out,Not With Team,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Golden State Warriors,"Santos, Gui",Questionable,Injury/Illness -Left Knee Tendinitis,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Houston Rockets,"Adams, Steven",Out,Injury/Illness -Right Soleus Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Houston Rockets,"Capela, Clint",Out,Injury/Illness -Right Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Houston Rockets,"Copeland, Quadir",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Houston Rockets,"Phillips,Julian",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Houston Rockets,"Thornton, Bruce",Available,G League -On Assignment,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Phoenix Suns,"Fleming, Rasheer",Questionable,Injury/Illness -Left Ankle Sprain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Phoenix Suns,"Goodwin, Jordan",Doubtful,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Phoenix Suns,"Williams, Mark",Out,Injury/Illness -Left Shoulder Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+San Antonio Spurs,"Brown, Maliq",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+San Antonio Spurs,"Gillespie, Ja'Kobi",Out,G League -Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+San Antonio Spurs,"Harris, Tobias",Out,Injury/Illness -Left Calf Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+San Antonio Spurs,"Quaintance, Jayden",Out,Injury/Illness -Right Knee Surgery,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Portland Trail Blazers,"Krejci, Vit",Out,Injury/Illness -Left Ankle Fracture,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Portland Trail Blazers,"Morant, Ja",Out,Injury/Illness -Left Hamstring Strain,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Portland Trail Blazers,"Sharpe, Shaedon",Out,,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Portland Trail Blazers,"Tonje, John",Out,G League - Two-Way,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Portland Trail Blazers,"III,Robert",Out,Rest,2026-11-07,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Awaka, Tobe",Questionable,Injury/Illness -Left MCL Sprain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Claxton, Nic",Questionable,Injury/Illness -Left Hamstring Strain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Collins, Zach",Out,Injury/Illness -Respiratory Illness,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Sellers, Jaylin",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Smith, Jalen",Probable,Injury/Illness -Left Finger Sprain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Chicago Bulls,"Swain, Dailyn",Out,Injury/Illness -Right Disc Irritation,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Los Angeles Lakers,"Doncic, Luka",Questionable,Injury/Illness -Low Back Tightness,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Los Angeles Lakers,"Kessler, Walker",Available,Injury/Illness -Left Finger Splint,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Detroit Pistons,"Duren, Jalen",Out,Injury/Illness -Right Hamstring Strain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Detroit Pistons,"Harkless, Elijah",Questionable,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Detroit Pistons,"Joe, Isaiah",Out,Injury/Illness -Right Hip Contusion,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Detroit Pistons,"Jones, Isaac",Questionable,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Detroit Pistons,"Onyenso, Ugonna",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Dallas Mavericks,"Biberovic, Tarik",Out,Injury/Illness-Right Heel Bursitis,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Dallas Mavericks,"de Larrea, Sergio",Out,Injury/Illness-Right Knee Sprain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Dallas Mavericks,"LivelyII,Dereck",Out,Injury/Illness-Right Foot Surgery,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Dallas Mavericks,"Martin, Caleb",Available,Injury/Illness-Right Thumb Sprain,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Boston Celtics,"Carter, Devin",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Boston Celtics,"Jr.,Christopher",Out,G League - On Assignment,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Boston Celtics,"Mitchell, Dillon",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Boston Celtics,"Williams, Amari",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Milwaukee Bucks,"Jones, Kam",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Milwaukee Bucks,"Markovic, Bogoljub",Out,G League - On Assignment,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Milwaukee Bucks,"Nance, Pete",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+Milwaukee Bucks,"Ryan, Cormac",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+New Orleans Pelicans,"Dia, Malik",Out,G League - Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+New Orleans Pelicans,"Missi,Yves",Out,,2026-11-08,2026-11-07,2026-11-07 17:45,2027
+New Orleans Pelicans,"PierreJr.,Jaron",Out,GLeague -Two-Way,2026-11-08,2026-11-07,2026-11-07 17:45,2027
