@@ -1,26 +1,8 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "test/restore-accelerator-rng",
- "commit": "75cb8a3922d87b10e010302ede73f9b5ecd4d3e0",
+ "branch": "perf/outlier-grid-min-rows",
+ "commit": "476d41fb0a7e4864f2d754c172c35d24dcbfb472",
  "prs": [
-  240,
-  241,
-  242,
-  243,
-  244,
-  245,
-  253,
-  254,
-  259,
-  260,
-  261,
-  262,
-  263,
-  265,
-  266,
-  267,
-  268,
-  269,
   270,
   271,
   272,
@@ -43,8 +25,12 @@
   305,
   304,
   306,
-  310
+  310,
+  311,
+  312,
+  313,
+  314
  ],
  "outside_stack": [],
- "resolved_at": "2026-11-03T17:23:40Z"
+ "resolved_at": "2026-11-07T15:56:37Z"
 }
