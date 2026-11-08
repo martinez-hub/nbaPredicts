@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "perf/outlier-grid-min-rows",
- "commit": "476d41fb0a7e4864f2d754c172c35d24dcbfb472",
+ "branch": "refactor/remove-deprecated",
+ "commit": "392e646499eda89da4c9af71176c58e00d496d92",
  "prs": [
   270,
   271,
@@ -29,8 +29,17 @@
   311,
   312,
   313,
-  314
+  314,
+  315,
+  318,
+  319,
+  320,
+  321,
+  324,
+  325,
+  326,
+  327
  ],
  "outside_stack": [],
- "resolved_at": "2026-11-07T15:56:37Z"
+ "resolved_at": "2026-11-08T16:23:31Z"
 }
