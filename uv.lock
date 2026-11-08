@@ -121,12 +121,13 @@ wheels = [
 
 [[package]]
 name = "equine"
-version = "0.1.9.dev72+g476d41fb0"
-source = { git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=476d41fb0a7e4864f2d754c172c35d24dcbfb472#476d41fb0a7e4864f2d754c172c35d24dcbfb472" }
+version = "0.1.9.dev81+g392e64649"
+source = { git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=392e646499eda89da4c9af71176c58e00d496d92#392e646499eda89da4c9af71176c58e00d496d92" }
 dependencies = [
     { name = "beartype" },
     { name = "icontract" },
     { name = "numpy" },
+    { name = "safetensors" },
     { name = "scipy" },
     { name = "torch", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torch", version = "2.14.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
@@ -419,7 +420,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "equine", git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=476d41fb0a7e4864f2d754c172c35d24dcbfb472" },
+    { name = "equine", git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=392e646499eda89da4c9af71176c58e00d496d92" },
     { name = "jax", specifier = ">=0.4.30" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pandas", specifier = ">=2.2" },
