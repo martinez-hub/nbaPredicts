@@ -121,8 +121,8 @@ wheels = [
 
 [[package]]
 name = "equine"
-version = "0.1.9.dev81+g392e64649"
-source = { git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=392e646499eda89da4c9af71176c58e00d496d92#392e646499eda89da4c9af71176c58e00d496d92" }
+version = "0.1.9.dev89+g52522d5eb"
+source = { git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=52522d5ebfcb5da5e9d377ffbd9c5b6e59e49f16#52522d5ebfcb5da5e9d377ffbd9c5b6e59e49f16" }
 dependencies = [
     { name = "beartype" },
     { name = "icontract" },
@@ -420,7 +420,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "equine", git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=392e646499eda89da4c9af71176c58e00d496d92" },
+    { name = "equine", git = "https://github.com/mit-ll-responsible-ai/equine.git?rev=52522d5ebfcb5da5e9d377ffbd9c5b6e59e49f16" },
     { name = "jax", specifier = ">=0.4.30" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pandas", specifier = ">=2.2" },
