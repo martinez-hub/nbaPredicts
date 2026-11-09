@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-02T21:54:35Z",
+ "generated_at": "2026-11-09T22:21:47Z",
  "winner": {
   "seasons": [
    {
@@ -7,9 +7,9 @@
     "equine_market": {
      "n": 1319,
      "accuracy": 0.6884,
-     "log_loss": 0.5855,
+     "log_loss": 0.5856,
      "brier": 0.2002,
-     "ece": 0.0423
+     "ece": 0.0417
     },
     "market": {
      "n": 1319,
@@ -20,17 +20,17 @@
     },
     "equine_gp": {
      "n": 1319,
-     "accuracy": 0.6717,
-     "log_loss": 0.5978,
-     "brier": 0.2058,
-     "ece": 0.0356
+     "accuracy": 0.671,
+     "log_loss": 0.5975,
+     "brier": 0.2057,
+     "ece": 0.0304
     },
     "logistic": {
      "n": 1319,
-     "accuracy": 0.6626,
+     "accuracy": 0.6603,
      "log_loss": 0.5976,
      "brier": 0.2061,
-     "ece": 0.0285
+     "ece": 0.0305
     },
     "elo": {
      "n": 1319,
@@ -54,7 +54,7 @@
      "accuracy": 0.6949,
      "log_loss": 0.5859,
      "brier": 0.2012,
-     "ece": 0.0393
+     "ece": 0.0411
     },
     "market": {
      "n": 1321,
@@ -65,17 +65,17 @@
     },
     "equine_gp": {
      "n": 1321,
-     "accuracy": 0.6911,
-     "log_loss": 0.5932,
+     "accuracy": 0.6927,
+     "log_loss": 0.5931,
      "brier": 0.204,
-     "ece": 0.0309
+     "ece": 0.0345
     },
     "logistic": {
      "n": 1321,
-     "accuracy": 0.6858,
+     "accuracy": 0.6851,
      "log_loss": 0.594,
      "brier": 0.2044,
-     "ece": 0.0241
+     "ece": 0.0231
     },
     "elo": {
      "n": 1321,
@@ -99,7 +99,7 @@
      "accuracy": 0.6853,
      "log_loss": 0.578,
      "brier": 0.1978,
-     "ece": 0.0288
+     "ece": 0.0287
     },
     "market": {
      "n": 1322,
@@ -110,17 +110,17 @@
     },
     "equine_gp": {
      "n": 1322,
-     "accuracy": 0.6868,
-     "log_loss": 0.5912,
+     "accuracy": 0.6853,
+     "log_loss": 0.5913,
      "brier": 0.2029,
-     "ece": 0.0179
+     "ece": 0.0172
     },
     "logistic": {
      "n": 1322,
-     "accuracy": 0.6785,
-     "log_loss": 0.5931,
+     "accuracy": 0.6778,
+     "log_loss": 0.5932,
      "brier": 0.204,
-     "ece": 0.0143
+     "ece": 0.0148
     },
     "elo": {
      "n": 1322,
@@ -140,47 +140,47 @@
   ],
   "reliability": [
    {
-    "predicted": 0.1602,
-    "observed": 0.1056,
-    "n": 180
+    "predicted": 0.1605,
+    "observed": 0.1141,
+    "n": 184
    },
    {
-    "predicted": 0.2529,
-    "observed": 0.229,
-    "n": 310
+    "predicted": 0.2525,
+    "observed": 0.2233,
+    "n": 309
    },
    {
-    "predicted": 0.3518,
-    "observed": 0.3414,
-    "n": 454
+    "predicted": 0.3507,
+    "observed": 0.3444,
+    "n": 453
    },
    {
-    "predicted": 0.4511,
-    "observed": 0.4355,
-    "n": 535
+    "predicted": 0.4508,
+    "observed": 0.4377,
+    "n": 546
    },
    {
     "predicted": 0.5508,
-    "observed": 0.5638,
-    "n": 619
+    "observed": 0.5689,
+    "n": 617
    },
    {
-    "predicted": 0.6488,
-    "observed": 0.6218,
-    "n": 698
+    "predicted": 0.6486,
+    "observed": 0.6248,
+    "n": 685
    },
    {
-    "predicted": 0.7474,
-    "observed": 0.7531,
-    "n": 636
+    "predicted": 0.747,
+    "observed": 0.7465,
+    "n": 639
    },
    {
-    "predicted": 0.8447,
-    "observed": 0.8223,
-    "n": 467
+    "predicted": 0.8449,
+    "observed": 0.8219,
+    "n": 466
    },
    {
-    "predicted": 0.9144,
+    "predicted": 0.9145,
     "observed": 0.9455,
     "n": 55
    }
@@ -189,31 +189,31 @@
    {
     "tercile": 0,
     "n": 1321,
-    "accuracy": 0.62,
-    "log_loss": 0.6512,
+    "accuracy": 0.6192,
+    "log_loss": 0.651,
     "brier": 0.23,
-    "ece": 0.0287
+    "ece": 0.0269
    },
    {
     "tercile": 1,
     "n": 1320,
-    "accuracy": 0.6674,
-    "log_loss": 0.6243,
-    "brier": 0.217,
-    "ece": 0.0216
+    "accuracy": 0.675,
+    "log_loss": 0.6199,
+    "brier": 0.215,
+    "ece": 0.0237
    },
    {
     "tercile": 2,
     "n": 1321,
-    "accuracy": 0.7623,
-    "log_loss": 0.5067,
-    "brier": 0.1657,
-    "ece": 0.0318
+    "accuracy": 0.7547,
+    "log_loss": 0.5109,
+    "brier": 0.1676,
+    "ece": 0.0366
    }
   ],
   "reliability_market_model": [
    {
-    "predicted": 0.0913,
+    "predicted": 0.0912,
     "observed": 0.0,
     "n": 22
    },
@@ -238,29 +238,29 @@
     "n": 481
    },
    {
-    "predicted": 0.554,
-    "observed": 0.5665,
-    "n": 556
+    "predicted": 0.5538,
+    "observed": 0.5658,
+    "n": 555
    },
    {
-    "predicted": 0.6468,
+    "predicted": 0.6467,
     "observed": 0.6286,
     "n": 727
    },
    {
     "predicted": 0.7484,
-    "observed": 0.7707,
-    "n": 532
+    "observed": 0.7711,
+    "n": 533
    },
    {
-    "predicted": 0.8483,
-    "observed": 0.8418,
-    "n": 493
+    "predicted": 0.8484,
+    "observed": 0.8404,
+    "n": 495
    },
    {
-    "predicted": 0.9164,
-    "observed": 0.9688,
-    "n": 64
+    "predicted": 0.9169,
+    "observed": 0.9839,
+    "n": 62
    }
   ]
  },
