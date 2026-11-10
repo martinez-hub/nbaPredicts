@@ -1,10 +1,8 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "fix/protonet-forward-temperature",
- "commit": "52522d5ebfcb5da5e9d377ffbd9c5b6e59e49f16",
+ "branch": "fix/protonet-trainable-head",
+ "commit": "eeead9f00ee889ce59692a10cb0136871a8a726c",
  "prs": [
-  272,
-  273,
   274,
   275,
   276,
@@ -44,8 +42,13 @@
   333,
   334,
   335,
-  336
+  336,
+  338,
+  339,
+  340,
+  341,
+  342
  ],
  "outside_stack": [],
- "resolved_at": "2026-11-09T20:11:41Z"
+ "resolved_at": "2026-11-10T17:20:15Z"
 }
