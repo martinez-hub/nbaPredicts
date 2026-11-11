@@ -1,7 +1,7 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
- "branch": "fix/protonet-trainable-head",
- "commit": "eeead9f00ee889ce59692a10cb0136871a8a726c",
+ "branch": "docs/notebook-followups",
+ "commit": "f6db247f09bdc162ee42eb399f65d85800bea37a",
  "prs": [
   274,
   275,
@@ -47,8 +47,11 @@
   339,
   340,
   341,
-  342
+  342,
+  344,
+  346,
+  347
  ],
  "outside_stack": [],
- "resolved_at": "2026-11-10T17:20:15Z"
+ "resolved_at": "2026-11-11T17:29:29Z"
 }
