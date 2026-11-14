@@ -38,7 +38,12 @@ log = logging.getLogger("wikipedia_archive")
 def fetch(s: requests.Session, url: str) -> dict | None:
     for attempt in range(4):
         time.sleep(PAUSE)
-        resp = s.get(url, timeout=60)
+        try:
+            resp = s.get(url, timeout=60)
+        except requests.RequestException as err:  # timeouts happen; retry
+            log.warning("%s: %s (retry %d)", url, err, attempt + 1)
+            time.sleep(30 * (attempt + 1))
+            continue
         if resp.status_code == 200:
             return resp.json()
         if resp.status_code == 404:
