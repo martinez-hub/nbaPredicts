@@ -56,7 +56,8 @@ from .impact import (
     monthly_ratings,
     pregame_impact,
 )
-from .injuries import combine, official_injuries, record_report
+from .injuries import combine, official_injuries
+from .injury_history import load_history
 from .market import fetch_odds
 from .stack import StackedWinner
 from .stints import fetch_plays
@@ -108,7 +109,6 @@ def gather_injuries(
     now: pd.Timestamp,
     teams: dict[str, dict[str, Any]],
     rosters: pd.DataFrame,
-    store: Store | None = None,
 ) -> tuple[pd.DataFrame, str]:
     """ESPN's injury list, refined by the NBA's official report when reachable.
 
@@ -119,11 +119,9 @@ def gather_injuries(
     official, source = pd.DataFrame(), "ESPN"
     if upcoming_ids:
         try:
-            official, url, raw = official_injuries(season, now, teams, rosters)
+            official, url, _ = official_injuries(season, now, teams, rosters)
             if url and not official.empty:
                 source = "NBA official report " + url.rsplit("/", 1)[-1]
-            if store is not None and record_report(store, raw, url, season):
-                log.info("recorded %s in data/injury_reports", url.rsplit("/", 1)[-1])
         except Exception as err:  # network, WAF, or PDF layout changes
             log.warning("official injury report unavailable: %s", err)
     return combine(espn, official), source
@@ -451,8 +449,11 @@ def daily(
     espn_rosters = pd.DataFrame(fetch_rosters(client, list(teams)))
     rosters = current_rosters(pv, espn=espn_rosters)
     injuries, injury_source = gather_injuries(
-        client, upcoming_ids, season, now, teams, rosters, store
+        client, upcoming_ids, season, now, teams, rosters
     )
+    # Past games' official reports, rebuilt each run (never committed: the
+    # league's data). Raises if too few game days have one.
+    reports = load_history(root, games, teams, now)
     market = fetch_market(client, upcoming)
     log.info("%d upcoming games, %d injury entries", len(upcoming_ids), len(injuries))
 
@@ -465,7 +466,7 @@ def daily(
         pregame_availability(
             pv,
             games,
-            store.load("injury_reports"),
+            reports,
             {t["name"]: tid for tid, t in teams.items()},
         ),
     )
@@ -482,7 +483,7 @@ def daily(
                     pv,
                     player_box,
                     games,
-                    store.load("injury_reports"),
+                    reports,
                     team_ids,
                     ratings,
                 ),

@@ -53,6 +53,7 @@ def export() -> None:
     from nbapredicts.collect import FIRST_SEASON, Store
     from nbapredicts.features import player_values, pregame_rosters
     from nbapredicts.impact import monthly_ratings, projected_minutes
+    from nbapredicts.injury_history import load_history
     from nbapredicts.pipeline import MODEL_FEATURES
     from nbapredicts.stack import STACK_CONFIG, Stage1, market_logit, out_of_fold_stage1
     from nbapredicts.winner import WinnerConfig, fit
@@ -113,7 +114,7 @@ def export() -> None:
     roster = pregame_rosters(
         app,
         games,
-        store.load("injury_reports"),
+        load_history(ROOT, games, teams, pd.Timestamp.now(tz="UTC")),
         {t["name"]: tid for tid, t in teams.items()},
         columns=("proj_min", "post_value"),
     )

@@ -30,6 +30,7 @@ from nbapredicts.features import (
     team_state,
 )
 from nbapredicts.impact import monthly_ratings, pregame_impact
+from nbapredicts.injury_history import load_history
 from nbapredicts.stack import STACK_CONFIG, Stage1, market_logit, out_of_fold_stage1
 from nbapredicts.winner import WinnerConfig, fit
 
@@ -71,8 +72,8 @@ def main() -> None:
         store.load("team_box"),
         store.load("player_box"),
     )
-    reports = store.load("injury_reports")
     teams = json.loads((ROOT / "data" / "teams.json").read_text())
+    reports = load_history(ROOT, games, teams, pd.Timestamp.now(tz="UTC"))
     team_ids = {t["name"]: tid for tid, t in teams.items()}
     pv = player_values(pb, games)
     feats = build_features(games, team_state(games, tb, pv, []), [])

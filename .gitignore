@@ -18,3 +18,5 @@ data_local/
 # ESPN's text (news, injury notes) is logged on the Mac into data_local/.
 data/text_news/
 data/text_injuries/
+# The league's injury-report rows: rebuilt each run (injury_history.py).
+data/injury_reports/
