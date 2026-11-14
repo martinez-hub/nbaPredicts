@@ -1,12 +1,14 @@
 name: equine-stack
 
-# Keep EQUINE at the newest open work: every morning, before the daily run,
-# re-resolve the tip of the open-PR stack on mit-ll-responsible-ai/equine.
+# Keep EQUINE at the newest open work: twice a day, before the morning and the
+# afternoon daily runs, re-resolve the tip of the open-PR stack on
+# mit-ll-responsible-ai/equine.
 # When it has moved, re-pin, re-lock and run the tests; push the new pin only
 # if they pass. A failure leaves the previous pin in place and fails the run.
 on:
   schedule:
     - cron: "47 9 * * *" # before the morning daily run
+    - cron: "7 20 * * *" # before the afternoon daily run
   workflow_dispatch:
 
 permissions:

@@ -144,3 +144,75 @@ def test_track_record_separates_backfilled_predictions():
     assert record["backfilled"] == 2
     assert record["before_tipoff"] == {"n": 1, "correct": 0}
     assert [r["backfilled"] for r in results] == [False, True, True]
+
+
+def test_first_pick_with_a_line_survives_later_runs():
+    from nbapredicts.pipeline import with_first_line
+
+    def run(at: str, p_home: list[float], p_market: list[float]) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "game_id": ["0", "1"],
+                "predicted_at": [at] * 2,
+                "p_home": p_home,
+                "p_market": p_market,
+            }
+        )
+
+    # Morning: a line for game 0 only.
+    first = with_first_line(
+        run("2026-11-01T10:00:00Z", [0.6, 0.5], [0.55, np.nan]), pd.DataFrame()
+    )
+    assert first["first_line_at"].tolist()[0] == "2026-11-01T10:00:00Z"
+    assert np.isnan(first["first_line_p_home"].iloc[1])
+    # Evening: both have lines; game 0 keeps its morning pick and line.
+    later = with_first_line(
+        run("2026-11-01T23:00:00Z", [0.7, 0.4], [0.65, 0.45]), first
+    )
+    assert later["first_line_p_home"].tolist() == [0.6, 0.4]
+    assert later["first_line_p_market"].tolist() == [0.55, 0.45]
+    assert later["first_line_at"].tolist() == [
+        "2026-11-01T10:00:00Z",
+        "2026-11-01T23:00:00Z",
+    ]
+
+
+def test_track_record_grades_the_early_pick_against_the_line_then():
+    games = schedule(["2026-10-25T23:30Z", "2026-10-26T23:30Z"], status="final")
+    games["home_pts"] = [110.0, 100.0]
+    games["away_pts"] = [100.0, 104.0]
+    preds = pd.DataFrame(
+        {
+            "game_id": ["0", "1"],
+            "season": [2027] * 2,
+            "start": games["start"],
+            "home_id": ["a", "b"],
+            "away_id": ["b", "a"],
+            "p_home": [0.7, 0.4],
+            "p_market": [0.68, 0.42],
+            "pred_home_pts": [112.0, 100.0],
+            "pred_away_pts": [104.0, 101.0],
+            "first_line_at": ["2026-10-25T11:30:00Z", "2026-10-26T13:30:00Z"],
+            "first_line_p_home": [0.65, 0.45],
+            "first_line_p_market": [0.6, 0.5],
+        }
+    )
+    odds = pd.DataFrame({"game_id": ["0", "1"], "p_close": [0.66, 0.4]})
+    record, _ = track_record(
+        preds,
+        pd.DataFrame(),
+        games,
+        pd.DataFrame(),
+        2027,
+        pd.Timestamp("2026-10-27T12:00Z"),
+        odds=odds,
+    )
+    early = record["early"]
+    assert early["n"] == 2 and early["hours_before"] == 11.0
+    assert np.isclose(early["pick_brier"], (0.35**2 + 0.45**2) / 2)
+    assert np.isclose(early["line_brier"], (0.4**2 + 0.5**2) / 2)
+    # Game 0: pick above the line, line rose. Game 1: pick below, line fell.
+    assert early["moved_toward"] == 2 and early["moved_n"] == 2
+    assert np.isclose(early["clv"], (0.06 + 0.1) / 2)
+    gap = record["vs_market"]["brier_gap"]
+    assert gap[1] <= gap[0] <= gap[2]

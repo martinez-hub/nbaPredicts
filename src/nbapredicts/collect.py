@@ -394,7 +394,12 @@ def update(
     seasons: Iterable[int],
     workers: int = 6,
 ) -> dict[str, int]:
-    """Refresh schedules for ``seasons`` and fetch every missing final box score."""
+    """Refresh schedules for ``seasons`` and fetch their missing final box scores.
+
+    Only those seasons: a few finished games never get a box score on ESPN
+    (four 2025-26 playoff games answer 404), and the daily run, which
+    refreshes the current season, should not ask for them again every time.
+    """
     seasons = list(seasons)
     games = _upsert(
         store.load("games"), fetch_schedules(client, seasons, workers), ["game_id"]
@@ -404,7 +409,9 @@ def update(
 
     team_box = store.load("team_box")
     have = set(team_box["game_id"]) if not team_box.empty else set()
-    finals = games.loc[games["status"] == "final", "game_id"]
+    finals = games.loc[
+        (games["status"] == "final") & games["season"].isin(seasons), "game_id"
+    ]
     missing = [g for g in finals if g not in have]
     log.info("fetching %d missing box scores", len(missing))
 

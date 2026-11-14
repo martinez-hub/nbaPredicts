@@ -176,6 +176,40 @@ def update_odds(store: Store, client: ESPNClient, games: pd.DataFrame) -> int:
 # --------------------------------------------------------------------------
 
 
+FIRST_LINE = ["first_line_at", "first_line_p_home", "first_line_p_market"]
+
+
+def with_first_line(new: pd.DataFrame, old: pd.DataFrame) -> pd.DataFrame:
+    """Keep each game's first prediction made with a betting line posted.
+
+    Later runs replace a game's row until tip-off, so only the last pick
+    would survive: made minutes before tip-off, against a line that is
+    nearly the close. The first pick with a line, and that line, show
+    whether the model knew something the market priced in only later.
+    """
+    new = new.copy()
+    new["first_line_at"] = pd.Series(np.nan, index=new.index, dtype=object)
+    new["first_line_p_home"] = np.nan
+    new["first_line_p_market"] = np.nan
+    if not old.empty and "first_line_at" in old:
+        prev = old.dropna(subset=["first_line_at"]).set_index("game_id")[FIRST_LINE]
+        kept = new["game_id"].isin(prev.index)
+        for c in FIRST_LINE:
+            new.loc[kept, c] = new.loc[kept, "game_id"].map(prev[c])
+    fresh = new["first_line_at"].isna() & new["p_market"].notna()
+    new.loc[fresh, "first_line_at"] = new.loc[fresh, "predicted_at"]
+    new.loc[fresh, "first_line_p_home"] = new.loc[fresh, "p_home"]
+    new.loc[fresh, "first_line_p_market"] = new.loc[fresh, "p_market"]
+    return new
+
+
+def _brier_gap(y: np.ndarray, a: np.ndarray, b: np.ndarray) -> list[float]:
+    """Mean Brier(a) - Brier(b) and its paired bootstrap 95% interval."""
+    d = (a - y) ** 2 - (b - y) ** 2
+    boots = d[np.random.default_rng(0).integers(0, len(d), (2000, len(d)))].mean(1)
+    return [float(d.mean()), *np.percentile(boots, [2.5, 97.5]).tolist()]
+
+
 def log_predictions(
     store: Store, name: str, new: pd.DataFrame, keys: list[str], games: pd.DataFrame
 ) -> pd.DataFrame:
@@ -226,6 +260,7 @@ def track_record(
     player_box: pd.DataFrame,
     season: int,
     now: pd.Timestamp,
+    odds: pd.DataFrame | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     finals = games[games["status"] == "final"]
     if preds.empty:
@@ -301,6 +336,42 @@ def track_record(
                 "market_correct": int(((both["p_market"] > 0.5) == (yb == 1)).sum()),
                 "equine_brier": float(((both["p_home"] - yb) ** 2).mean()),
                 "market_brier": float(((both["p_market"] - yb) ** 2).mean()),
+                "brier_gap": _brier_gap(
+                    yb.to_numpy(),
+                    both["p_home"].to_numpy(),
+                    both["p_market"].to_numpy(),
+                ),
+            }
+    if "first_line_p_home" in scored and odds is not None and not odds.empty:
+        # The first pick made with a line posted, against that line, the
+        # closing line, and where the line went in between.
+        early = scored[~scored["backfilled"]].dropna(
+            subset=["first_line_p_home", "first_line_p_market"]
+        )
+        early = early.merge(odds[["game_id", "p_close"]], on="game_id", how="inner")
+        early = early.dropna(subset=["p_close"])
+        if not early.empty:
+            ye = (early["home_pts"] > early["away_pts"]).astype(float).to_numpy()
+            pick = early["first_line_p_home"].to_numpy(float)
+            then = early["first_line_p_market"].to_numpy(float)
+            close = early["p_close"].to_numpy(float)
+            lead = pd.to_datetime(early["start"], utc=True) - pd.to_datetime(
+                early["first_line_at"], utc=True
+            )
+            toward, moved = np.sign(pick - then), np.sign(close - then)
+            both_moved = (toward != 0) & (moved != 0)
+            record["early"] = {
+                "n": int(len(early)),
+                "hours_before": float(lead.dt.total_seconds().median() / 3600),
+                "pick_brier": float(((pick - ye) ** 2).mean()),
+                "line_brier": float(((then - ye) ** 2).mean()),
+                "close_brier": float(((close - ye) ** 2).mean()),
+                "vs_line": _brier_gap(ye, pick, then),
+                "vs_close": _brier_gap(ye, pick, close),
+                # Did the line move toward the pick before tip-off?
+                "moved_toward": int((toward == moved)[both_moved].sum()),
+                "moved_n": int(both_moved.sum()),
+                "clv": float((toward * (close - then)).mean()),
             }
     if not player_preds.empty:
         pp = player_preds.merge(
@@ -489,7 +560,11 @@ def daily(
         for r in winner.itertuples()
     ]
     preds = log_predictions(
-        store, "predictions", pd.DataFrame(pred_rows), ["game_id"], games
+        store,
+        "predictions",
+        with_first_line(pd.DataFrame(pred_rows), store.load("predictions")),
+        ["game_id"],
+        games,
     )
     if not lines.empty:
         pl = lines.merge(upcoming[["game_id", "season"]], on="game_id")
@@ -514,7 +589,9 @@ def daily(
     else:
         player_preds = store.load("player_predictions")
 
-    record, results = track_record(preds, player_preds, games, player_box, season, now)
+    record, results = track_record(
+        preds, player_preds, games, player_box, season, now, odds=odds
+    )
 
     inj_by_team: dict[str, list[dict[str, str]]] = {}
     for r in injuries.itertuples():
