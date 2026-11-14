@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.martinez-hub.nbapredicts-textlog</string>
+  <!-- ESPN's injury notes and news, logged into data_local/ on the Mac every
+       hour: ESPN's text stays off the public repo, so the daily workflow no
+       longer logs it. Needs the SSD mounted; an hour missed while the Mac
+       sleeps runs on wake. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-c</string>
+    <string>cd /Volumes/ExtremeSSD/nbaPredicts &amp;&amp; /Users/josuemartinez/.local/bin/uv run nbapredicts text-log</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>3600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/josuemartinez</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/josuemartinez/Library/Logs/nbapredicts-textlog.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/josuemartinez/Library/Logs/nbapredicts-textlog.log</string>
+</dict>
+</plist>

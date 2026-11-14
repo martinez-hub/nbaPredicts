@@ -4,6 +4,9 @@ ESPN's injury notes and news are current-only (there is no archive), so the
 only way to have a leakage-free history of what was known before each game,
 for the text-reading model, is to record it as it appears. Each run appends
 new injury notes and news items; nothing here feeds the models yet.
+
+The text is ESPN's own writing, so it stays out of the public repo: the Mac
+runs ``nbapredicts text-log`` (scripts/launchd) into ``data_local/``.
 """
 
 from __future__ import annotations

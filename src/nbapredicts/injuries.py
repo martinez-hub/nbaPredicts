@@ -46,11 +46,9 @@ _GAME_DATE = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 # The column header, spaces removed: "Game Date  Game Time  Matchup ..."
 _HEADER = "gamedategametimematchup"
 _SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
-# official.nba.com refuses non-browser user agents.
-_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-    " (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
-}
+# A plain label, not a browser's: the project does not imitate browsers to get
+# past a site's filters. official.nba.com answered it on 2026-11-14.
+_HEADERS = {"User-Agent": "research-client/1.0"}
 
 
 def normalize_name(name: str) -> str:
