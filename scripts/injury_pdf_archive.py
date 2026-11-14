@@ -71,7 +71,16 @@ def main() -> None:
     got = 0
     for i, name in enumerate(todo):
         time.sleep(PAUSE)
-        resp = session.get(URL.format(name=name), timeout=60)
+        resp = None
+        for attempt in range(4):  # the CDN drops a connection now and then
+            try:
+                resp = session.get(URL.format(name=name), timeout=60)
+                break
+            except requests.RequestException as err:
+                log.warning("%s: %s (retry %d)", name, err, attempt + 1)
+                time.sleep(30 * (attempt + 1))
+        if resp is None:
+            continue  # not marked missing: a later run tries again
         if resp.status_code == 200 and resp.content[:4] == b"%PDF":
             (OUT / name).write_bytes(resp.content)
             got += 1
