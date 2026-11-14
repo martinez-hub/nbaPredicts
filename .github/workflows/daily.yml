@@ -100,3 +100,7 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          # GitHub Pages has stalled at "updating_pages" for over the default
+          # ten minutes (2026-11-05); the next run published fine.
+          timeout: 1800000

@@ -510,7 +510,15 @@ models agree on only 40-45% of the flagged games.
 ## Where this leaves "beating the market"
 
 Matching the closing line is achieved; beating it, or the opening line, is
-not, with every input tried so far. Remaining candidates: a text model
-over the logged news (the injury
-reports' reasons added nothing, above), and live grading against the line
-at prediction time, which the prediction log now records.
+not, with every input tried so far. The remaining candidate is a text model
+over news and injury notes (the injury reports' reasons added nothing, above).
+
+Live, 2026-27 to Nov 13: the logged pick, made about an hour before tip-off,
+scores 0.1793 Brier against the line's 0.1786 on 174 games (difference
++0.0006, 95% interval -0.0008 to +0.0021). Since 2026-11-14 the log also keeps
+each game's first pick made with a line posted (`first_line_*`; earlier games
+rebuilt from the log's git history by `scripts/first_lines.py`): on 122 games,
+picked a median of 24 hours before tip-off, it ties the line posted then
+(0.17106 vs 0.17105) and trails the closing line (0.1701). The line then moved
+toward the pick in 62 of 115 games, within chance. The page shows these as the
+record grows.
