@@ -5,8 +5,12 @@ import pandas as pd
 
 from nbapredicts.forecast import (
     COVARIATES,
+    MIN_GAMES,
+    PLAYER_STATS,
+    PLAYERS_PER_TEAM,
     Job,
     TimesFM,
+    forecast_player_lines,
     margin_per_logit,
     split_total,
 )
@@ -118,3 +122,38 @@ def test_margin_per_logit_recovers_the_spread_line():
     )
     slope, intercept = margin_per_logit(odds)
     assert np.isclose(slope, 7.0) and np.isclose(intercept, 2.0)
+
+
+def test_players_out_or_without_history_leave_room_for_the_next_ones():
+    # 14 players ranked by value: the top 3 are out and the 4th has too few
+    # games, so the list should reach down to the 14th to fill 10 places.
+    ids = [f"p{i}" for i in range(14)]
+    rosters = pd.DataFrame(
+        {
+            "team_id": "t",
+            "athlete_id": ids,
+            "name": ids,
+            "post_value": np.arange(14, 0, -1, dtype=float),
+        }
+    )
+    games = {pid: MIN_GAMES - 7 if pid == "p3" else MIN_GAMES + 5 for pid in ids}
+    pf = pd.DataFrame(
+        [
+            {
+                "athlete_id": pid,
+                "team_id": "t",
+                "game_id": f"old{k}",
+                **dict.fromkeys(PLAYER_STATS, 10.0),
+                **dict.fromkeys(COVARIATES, 0.0),
+            }
+            for pid, n in games.items()
+            for k in range(n)
+        ]
+    )
+    tf = pd.DataFrame(
+        {"game_id": ["next"], "team_id": ["t"], **{c: [0.0] for c in COVARIATES}}
+    )
+    injuries = pd.DataFrame({"athlete_id": ["p0", "p1", "p2"], "status": "Out"})
+    lines = forecast_player_lines(fake_timesfm(), pf, tf, rosters, ["next"], injuries)
+    assert sorted(lines["athlete_id"], key=lambda a: int(a[1:])) == ids[4:]
+    assert len(lines) == PLAYERS_PER_TEAM
