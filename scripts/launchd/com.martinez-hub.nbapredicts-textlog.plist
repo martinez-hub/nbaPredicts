@@ -4,15 +4,20 @@
 <dict>
   <key>Label</key>
   <string>com.martinez-hub.nbapredicts-textlog</string>
-  <!-- ESPN's injury notes and news, logged into data_local/ on the Mac every
-       hour: ESPN's text stays off the public repo, so the daily workflow no
-       longer logs it. Needs the SSD mounted; an hour missed while the Mac
-       sleeps runs on wake. -->
+  <!-- ESPN's injury notes and news, logged every hour: ESPN's text stays off
+       the public repo, so the daily workflow no longer logs it. launchd jobs
+       may not read the external SSD (macOS: "Operation not permitted"), so
+       this runs from the internal disk: a small venv with pandas, requests
+       and this package, installed without its other dependencies (reinstall
+       it the same way after text_log.py changes). It writes to
+       ~/.local/share/nbapredicts/data_local, which the repo's
+       data_local/text_news and data_local/text_injuries link to. -->
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/bash</string>
-    <string>-c</string>
-    <string>cd /Volumes/ExtremeSSD/nbaPredicts &amp;&amp; /Users/josuemartinez/.local/bin/uv run nbapredicts text-log</string>
+    <string>/Users/josuemartinez/.venvs/nbapredicts-textlog/bin/nbapredicts</string>
+    <string>--root</string>
+    <string>/Users/josuemartinez/.local/share/nbapredicts</string>
+    <string>text-log</string>
   </array>
   <key>StartInterval</key>
   <integer>3600</integer>
