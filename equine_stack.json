@@ -1,9 +1,8 @@
 {
  "repo": "mit-ll-responsible-ai/equine",
  "branch": "docs/notebook-followups",
- "commit": "26b9efb99be9beca1f555538749fe6f992703119",
+ "commit": "e8c60096576aa562149887646285781d8bdcd0ed",
  "prs": [
-  277,
   278,
   282,
   283,
@@ -50,5 +49,5 @@
   347
  ],
  "outside_stack": [],
- "resolved_at": "2026-11-13T17:25:06Z"
+ "resolved_at": "2026-11-14T16:10:12Z"
 }
