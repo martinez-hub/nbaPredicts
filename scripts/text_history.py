@@ -173,6 +173,7 @@ MONTHS = {
     m: i
     for i, m in enumerate("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1)
 }
+STATUSES = {"Out", "Day-To-Day", "Questionable", "Doubtful", "Probable", "Suspension"}
 MON_DAY = re.compile(r"^(?:[A-Z][a-z]{2}, )?([A-Z][a-z]{2})\.? (\d{1,2})$")
 
 
@@ -192,7 +193,8 @@ def dated(month: str, day: str, snapshot: datetime) -> str | None:
 
 
 def espn(lines: list[str], snap: datetime) -> Iterator[dict]:
-    """Old layout: player, status, date, 'Comment:', note. New layout:
+    """Three layouts. 2010-2019: player, status, date, 'Comment:', note.
+    About 2020-2023: player, position, date, status, note. Since about 2023:
     player, position, return date, status, 'Mon D: note'."""
     team = None
     i = 0
@@ -201,32 +203,45 @@ def espn(lines: list[str], snap: datetime) -> Iterator[dict]:
             team = lines[i]
             i += 2
             continue
-        if team and i + 4 < len(lines) and lines[i + 3] == "Comment:":
-            m = MON_DAY.match(lines[i + 2])
-            if m:
-                yield {
-                    "team": team,
-                    "player": lines[i],
-                    "status": lines[i + 1],
-                    "note_date": dated(*m.groups(), snap),
-                    "text": lines[i + 4],
-                }
-                i += 5
-                continue
-        if team and i + 4 < len(lines):
-            m = re.match(r"^([A-Z][a-z]{2}) (\d{1,2}): (.+)$", lines[i + 4])
-            if m and len(lines[i + 1]) <= 3:
-                yield {
-                    "team": team,
-                    "player": lines[i],
-                    "position": lines[i + 1],
-                    "expected_return": lines[i + 2],
-                    "status": lines[i + 3],
-                    "note_date": dated(m[1], m[2], snap),
-                    "text": m[3],
-                }
-                i += 5
-                continue
+        if not team or i + 4 >= len(lines):
+            i += 1
+            continue
+        row = lines[i : i + 5]
+        m = MON_DAY.match(row[2])
+        if row[3] == "Comment:" and m:
+            yield {
+                "team": team,
+                "player": row[0],
+                "status": row[1],
+                "note_date": dated(*m.groups(), snap),
+                "text": row[4],
+            }
+            i += 5
+            continue
+        dated_note = re.match(r"^([A-Z][a-z]{2}) (\d{1,2}): (.+)$", row[4])
+        if len(row[1]) <= 3 and dated_note:
+            yield {
+                "team": team,
+                "player": row[0],
+                "position": row[1],
+                "expected_return": row[2],
+                "status": row[3],
+                "note_date": dated(dated_note[1], dated_note[2], snap),
+                "text": dated_note[3],
+            }
+            i += 5
+            continue
+        if len(row[1]) <= 3 and m and row[3] in STATUSES:
+            yield {
+                "team": team,
+                "player": row[0],
+                "position": row[1],
+                "status": row[3],
+                "note_date": dated(*m.groups(), snap),
+                "text": row[4],
+            }
+            i += 5
+            continue
         i += 1
 
 
@@ -273,23 +288,32 @@ ROTO_STAMP = re.compile(r"^([A-Z][a-z]{2}) (\d{1,2}) - \d{1,2}:\d{2} [AP]M$")
 
 
 def rotoworld(lines: list[str], snap: datetime) -> Iterator[dict]:
-    """Player, '- G -', team, news, analysis, 'Jan 1 - 11:19 PM'."""
+    """Player, '- G -', team, news, analysis, then optional 'Source:' and
+    'Related:' credits (each followed by its line), then 'Jan 1 - 11:19 PM'."""
     for i in range(len(lines) - 5):
         if not re.match(r"^- [A-Z/]+ -$", lines[i + 1]):
             continue
-        for j in range(i + 3, min(i + 7, len(lines))):
+        body, j = [], i + 3
+        while j < min(i + 14, len(lines)):
             m = ROTO_STAMP.match(lines[j])
             if m:
-                body = lines[i + 3 : j]
-                yield {
-                    "team": lines[i + 2],
-                    "player": lines[i],
-                    "position": lines[i + 1].strip("- "),
-                    "note_date": dated(m[1], m[2], snap),
-                    "text": body[0],
-                    "impact": " ".join(body[1:]) or None,
-                }
                 break
+            if lines[j] in ("Source:", "Related:"):
+                j += 2
+                continue
+            body.append(lines[j])
+            j += 1
+        else:
+            continue
+        if body:
+            yield {
+                "team": lines[i + 2],
+                "player": lines[i],
+                "position": lines[i + 1].strip("- "),
+                "note_date": dated(m[1], m[2], snap),
+                "text": body[0],
+                "impact": " ".join(body[1:]) or None,
+            }
 
 
 PARSERS = {"espn_injuries": espn, "cbs_injuries": cbs, "rotoworld_news": rotoworld}
