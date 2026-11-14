@@ -216,3 +216,29 @@ def test_track_record_grades_the_early_pick_against_the_line_then():
     assert np.isclose(early["clv"], (0.06 + 0.1) / 2)
     gap = record["vs_market"]["brier_gap"]
     assert gap[1] <= gap[0] <= gap[2]
+
+
+def test_first_line_survives_a_slate_with_no_earlier_picks():
+    from nbapredicts.pipeline import with_first_line
+
+    # Earlier games carry first picks; none of this run's games do yet.
+    old = pd.DataFrame(
+        {
+            "game_id": ["0"],
+            "first_line_at": ["2026-11-01T10:00:00Z"],
+            "first_line_p_home": [0.6],
+            "first_line_p_market": [0.55],
+        }
+    ).astype({"first_line_at": "str"})
+    new = pd.DataFrame(
+        {
+            "game_id": ["7", "8"],
+            "predicted_at": ["2026-11-14T17:00:00Z"] * 2,
+            "p_home": [0.6, 0.5],
+            "p_market": [0.58, np.nan],
+        }
+    )
+    out = with_first_line(new, old)
+    assert out["first_line_at"].tolist()[0] == "2026-11-14T17:00:00Z"
+    assert out["first_line_p_market"].tolist()[0] == 0.58
+    assert pd.isna(out["first_line_at"].iloc[1])

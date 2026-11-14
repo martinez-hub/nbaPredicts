@@ -193,8 +193,11 @@ def with_first_line(new: pd.DataFrame, old: pd.DataFrame) -> pd.DataFrame:
     if not old.empty and "first_line_at" in old:
         prev = old.dropna(subset=["first_line_at"]).set_index("game_id")[FIRST_LINE]
         kept = new["game_id"].isin(prev.index)
-        for c in FIRST_LINE:
-            new.loc[kept, c] = new.loc[kept, "game_id"].map(prev[c])
+        # pandas 3 rejects even an empty copy across dtypes (text into an
+        # all-missing float column), so copy only when a game has a pick.
+        if kept.any():
+            for c in FIRST_LINE:
+                new.loc[kept, c] = new.loc[kept, "game_id"].map(prev[c])
     fresh = new["first_line_at"].isna() & new["p_market"].notna()
     new.loc[fresh, "first_line_at"] = new.loc[fresh, "predicted_at"]
     new.loc[fresh, "first_line_p_home"] = new.loc[fresh, "p_home"]
