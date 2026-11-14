@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.martinez-hub.nbapredicts-live</string>
+  <!-- The live logger (src/nbapredicts/live.py), a pass every 2 minutes:
+       the NBA's lineups file, reporters on Bluesky, news feeds, Polymarket's
+       order book, ESPN's odds, news, injury notes and current-only numbers.
+       None of these keep a history, and none is committed (third-party data).
+
+       launchd jobs may not read the external SSD (macOS answers "Operation
+       not permitted"), so this runs from the internal disk: a small venv with
+       pandas, requests and this package installed without its other
+       dependencies (reinstall it the same way after live.py, text_log.py or
+       espn.py change). It writes to ~/.local/share/nbapredicts/data_local;
+       "nbapredicts live-sweep", run from a shell, moves finished days to the
+       SSD. It stops writing below 5 GB free. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/josuemartinez/.venvs/nbapredicts-textlog/bin/nbapredicts</string>
+    <string>--root</string>
+    <string>/Users/josuemartinez/.local/share/nbapredicts</string>
+    <string>live-log</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>120</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/josuemartinez</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/josuemartinez/Library/Logs/nbapredicts-live.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/josuemartinez/Library/Logs/nbapredicts-live.log</string>
+</dict>
+</plist>

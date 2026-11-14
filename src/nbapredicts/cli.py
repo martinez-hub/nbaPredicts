@@ -41,6 +41,20 @@ def main(argv: list[str] | None = None) -> None:
         help="append ESPN's injury notes and news to data_local/ (kept off the repo)",
     )
 
+    sub.add_parser(
+        "live-log",
+        help="one pass of the live logger (lineups, news, prices) into data_local/live",
+    )
+    p = sub.add_parser(
+        "live-sweep", help="move finished days of the live log to the SSD archive"
+    )
+    p.add_argument(
+        "--staging",
+        type=Path,
+        default=Path.home() / ".local/share/nbapredicts/data_local/live",
+    )
+    p.add_argument("--archive", type=Path, default=ROOT / "data_local" / "live")
+
     p = sub.add_parser("backtest", help="walk-forward evaluation of both models")
     p.add_argument("--seasons", type=int, nargs="+", default=None)
     p.add_argument("--player-sample", type=int, default=3000)
@@ -101,6 +115,19 @@ def main(argv: list[str] | None = None) -> None:
                 log_text(local, client, now, current_season(now.to_pydatetime()))
             )
         )
+
+    elif args.command == "live-log":
+        from .live import run
+
+        print(json.dumps(run(root), default=str))
+
+    elif args.command == "live-sweep":
+        import pandas as pd
+
+        from .live import EASTERN, sweep
+
+        today = pd.Timestamp.now(tz=EASTERN).date()
+        print(json.dumps({"moved": sweep(args.staging, args.archive, today)}))
 
     elif args.command == "backtest":
         import pandas as pd
