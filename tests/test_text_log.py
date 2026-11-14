@@ -27,3 +27,27 @@ def test_append_keeps_only_new_notes(tmp_path):
     )
     assert _append(store, "notes", again, ["name", "note_date", "short_comment"]) == 1
     assert len(store.load("notes")) == 3
+
+
+class FakeESPN:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+    def get(self, path, **params):
+        if path == "injuries":
+            athlete = {"id": "7", "displayName": "A Player"}
+            note = {"athlete": athlete, "date": "d1", "shortComment": "Out tonight."}
+            return {"injuries": [{"id": "1", "injuries": [note]}]}
+        return {"articles": [{"id": 9, "headline": "News", "description": "Text"}]}
+
+
+def test_text_log_command_keeps_espn_text_out_of_the_public_data(tmp_path, monkeypatch):
+    from nbapredicts import cli
+
+    monkeypatch.setattr(cli, "ESPNClient", FakeESPN)
+    cli.main(["--root", str(tmp_path), "text-log"])
+    local = Store(tmp_path / "data_local")
+    assert len(local.load("text_injuries")) == 1
+    assert len(local.load("text_news")) == 1
+    assert not (tmp_path / "data" / "text_news").exists()
+    assert not (tmp_path / "data" / "text_injuries").exists()

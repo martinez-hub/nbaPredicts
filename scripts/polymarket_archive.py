@@ -1,0 +1,311 @@
+"""Archive Polymarket's NBA game prices (1-minute) and trades, kept local.
+
+The question these answer: after a player's status changes, how long does
+the market take to price it? That needs prices with timestamps, and
+Polymarket's are free from 2024-25. Its CLOB still serves 1-minute history
+for settled markets, but its newer API keeps 1-minute data for only about a
+week, so the history is archived while it is served.
+
+Research only: nothing here trades. Everything stays in data_local/ (never
+the repo or the site), requests go one at a time with a plain client name,
+and a refusal stops the run rather than being worked around.
+
+    uv run python scripts/polymarket_archive.py events   # find the games
+    uv run python scripts/polymarket_archive.py prices   # 1-minute prices
+    uv run python scripts/polymarket_archive.py trades   # moneyline trades
+
+Each step skips what is already on disk, so a stopped run resumes.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import gzip
+import json
+import logging
+import re
+import sys
+import time
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
+import requests
+
+from nbapredicts.collect import Store
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "data_local" / "polymarket"
+GAMMA = "https://gamma-api.polymarket.com"
+CLOB = "https://clob.polymarket.com"
+DATA = "https://data-api.polymarket.com"
+NBA_SERIES = 10345  # Polymarket's NBA game series; it starts with 2025-26
+FIRST_DAY = "2024-04-01"  # the first NBA game markets (2024 playoffs)
+GAME_SLUG = re.compile(r"^nba-([a-z]{3})-([a-z]{3})-(\d{4}-\d{2}-\d{2})$")
+PAUSE = 0.25  # seconds between requests: about 4 a second, far under the limits
+USER_AGENT = "research-client/1.0"
+TRADE_FIELDS = ["timestamp", "side", "outcome_index", "price", "size"]
+
+log = logging.getLogger("polymarket_archive")
+
+
+class Refused(RuntimeError):
+    """The server refused us; the run stops instead of working around it."""
+
+
+def get(session: requests.Session, url: str, **params) -> object:
+    for attempt in range(6):
+        time.sleep(PAUSE)
+        try:
+            resp = session.get(url, params=params, timeout=60)
+        except requests.RequestException as err:
+            log.warning("%s: %s (retry %d)", url, err, attempt + 1)
+            time.sleep(10 * (attempt + 1))
+            continue
+        if resp.status_code in (401, 403, 451):
+            raise Refused(f"{resp.status_code} from {resp.url}")
+        if resp.status_code in (429, 503):
+            wait = float(resp.headers.get("Retry-After") or 10 * (attempt + 1))
+            log.warning("%s: %d, waiting %.0f s", url, resp.status_code, wait)
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
+    raise RuntimeError(f"{url} kept failing")
+
+
+def write_json(path: Path, obj: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    with gzip.open(tmp, "wt") as f:
+        json.dump(obj, f)
+    tmp.rename(path)
+
+
+def read_json(path: Path) -> object:
+    with gzip.open(path, "rt") as f:
+        return json.load(f)
+
+
+# --------------------------------------------------------------------------
+# Events: one per game
+# --------------------------------------------------------------------------
+
+
+def series_events(session: requests.Session) -> list[dict]:
+    """Settled game events in Polymarket's NBA series (2025-26 on)."""
+    out, offset = [], 0
+    while True:
+        page = get(
+            session,
+            f"{GAMMA}/events",
+            series_id=NBA_SERIES,
+            closed="true",
+            order="startDate",
+            ascending="true",
+            limit=100,
+            offset=offset,
+        )
+        if not page:
+            return out
+        out += [e for e in page if GAME_SLUG.match(e.get("slug", ""))]
+        offset += len(page)
+
+
+def team_codes(events: list[dict], teams: dict) -> dict[str, str]:
+    """Our team id -> Polymarket's slug code, learned from titled events
+    ("Knicks vs. Celtics" is nba-nyk-bos-...: away first)."""
+    by_short = {t["short"]: tid for tid, t in teams.items()}
+    codes: dict[str, str] = {}
+    for e in events:
+        m = GAME_SLUG.match(e["slug"])
+        names = [s.strip() for s in e.get("title", "").split(" vs. ")]
+        if m and len(names) == 2 and all(n in by_short for n in names):
+            codes.setdefault(by_short[names[0]], m.group(1))
+            codes.setdefault(by_short[names[1]], m.group(2))
+    return codes
+
+
+def slug_candidates(away: str, home: str, game: pd.Series) -> list[str]:
+    utc_day = game["start"].strftime("%Y-%m-%d")
+    days = dict.fromkeys([str(game["date"]), utc_day])
+    return [f"nba-{a}-{h}-{d}" for d in days for a, h in ((away, home), (home, away))]
+
+
+def find_events(session: requests.Session) -> None:
+    teams = json.loads((ROOT / "data" / "teams.json").read_text())
+    events = series_events(session)
+    log.info("series %d: %d settled game events", NBA_SERIES, len(events))
+    codes = team_codes(events, teams)
+    if len(codes) < 30:
+        log.warning("learned codes for %d teams only: %s", len(codes), codes)
+    for e in events:
+        path = OUT / "events" / f"{e['slug']}.json.gz"
+        if not path.exists():
+            write_json(path, e)
+    # Before the series existed: look each game up by its slug.
+    games = Store(ROOT / "data").load("games")
+    games = games[(games["status"] == "final") & (games["start"] >= FIRST_DAY)]
+    known = {p.name.removesuffix(".json.gz") for p in (OUT / "events").glob("*.gz")}
+    missing = []
+    for _, g in games.sort_values("start").iterrows():
+        away, home = codes.get(g["away_id"]), codes.get(g["home_id"])
+        if not away or not home:
+            continue
+        cands = slug_candidates(away, home, g)
+        if any(c in known for c in cands):
+            continue
+        found = None
+        for slug in cands:
+            hits = get(session, f"{GAMMA}/events", slug=slug)
+            if hits:
+                found = hits[0]
+                break
+        if found:
+            write_json(OUT / "events" / f"{found['slug']}.json.gz", found)
+            known.add(found["slug"])
+        else:
+            missing.append(g["game_id"])
+    log.info("%d events on disk; %d games with no event", len(known), len(missing))
+    (OUT / "missing_games.json").write_text(json.dumps(missing))
+
+
+def markets(kinds: set[str] | None) -> list[tuple[str, dict]]:
+    out = []
+    for path in sorted((OUT / "events").glob("*.json.gz")):
+        event = read_json(path)
+        for m in event.get("markets", []):
+            kind = m.get("sportsMarketType") or "moneyline"
+            if kinds is None or kind in kinds:
+                out.append((event["slug"], m))
+    # Moneylines first: they are what the timing test needs.
+    out.sort(key=lambda sm: (sm[1].get("sportsMarketType") != "moneyline", sm[0]))
+    return out
+
+
+# --------------------------------------------------------------------------
+# Prices and trades
+# --------------------------------------------------------------------------
+
+
+def _time(text: str | None) -> datetime | None:
+    if not text:
+        return None
+    return pd.Timestamp(text).tz_convert(UTC).to_pydatetime()
+
+
+def price_history(session: requests.Session, token: str, start, end) -> list[dict]:
+    """1-minute points, a day per request (a request returns at most a
+    day's worth at this fidelity)."""
+    points: dict[int, float] = {}
+    t = start
+    while t < end:
+        stop = min(t + timedelta(days=1), end)
+        page = get(
+            session,
+            f"{CLOB}/prices-history",
+            market=token,
+            startTs=int(t.timestamp()),
+            endTs=int(stop.timestamp()),
+            fidelity=1,
+        )
+        for pt in page.get("history", []):
+            points[int(pt["t"])] = float(pt["p"])
+        t = stop
+    return [{"t": k, "p": points[k]} for k in sorted(points)]
+
+
+def archive_prices(session: requests.Session, kinds: set[str] | None) -> None:
+    todo = markets(kinds)
+    log.info("%d markets", len(todo))
+    for i, (slug, m) in enumerate(todo):
+        start = _time(m.get("startDate")) or _time(m.get("createdAt"))
+        end = _time(m.get("closedTime")) or _time(m.get("endDate"))
+        if not start or not end:
+            continue
+        end += timedelta(hours=1)
+        tokens = json.loads(m.get("clobTokenIds") or "[]")
+        # Both sides of a moneyline (``p`` may not be complementary); one
+        # side elsewhere.
+        if (m.get("sportsMarketType") or "moneyline") != "moneyline":
+            tokens = tokens[:1]
+        for side, token in enumerate(tokens):
+            path = OUT / "prices" / slug / f"{m['id']}_{side}.json.gz"
+            if path.exists():
+                continue
+            hist = price_history(session, token, start, end)
+            write_json(path, {"market": m["id"], "token": token, "history": hist})
+        if i % 100 == 0:
+            log.info("prices: %d of %d markets", i, len(todo))
+    log.info("prices done")
+
+
+def archive_trades(session: requests.Session, kinds: set[str] | None) -> None:
+    """Every fill (taker side once), newest first as served. Only time, side,
+    outcome, price and size are kept: no wallets or names."""
+    todo = markets(kinds)
+    log.info("%d markets", len(todo))
+    for i, (slug, m) in enumerate(todo):
+        path = OUT / "trades" / slug / f"{m['id']}.csv.gz"
+        if path.exists() or not m.get("conditionId"):
+            continue
+        rows, cursor = [], None
+        while True:
+            params = {"cursor": cursor} if cursor else {"limit": 1000}
+            page = get(
+                session, f"{DATA}/v2/trades", condition=m["conditionId"], **params
+            )
+            rows += [{k: r.get(k) for k in TRADE_FIELDS} for r in page.get("data", [])]
+            cursor = (page.get("pagination") or {}).get("next_cursor")
+            if not cursor:
+                break
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        with gzip.open(tmp, "wt", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=TRADE_FIELDS)
+            w.writeheader()
+            w.writerows(sorted(rows, key=lambda r: r["timestamp"] or 0))
+        tmp.rename(path)
+        if i % 50 == 0:
+            log.info("trades: %d of %d markets", i, len(todo))
+    log.info("trades done")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("step", choices=["events", "prices", "trades"])
+    parser.add_argument(
+        "--kinds",
+        nargs="*",
+        default=None,
+        help="market types (moneyline, spreads, totals); default all for "
+        "prices, moneyline for trades",
+    )
+    args = parser.parse_args()
+    OUT.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(OUT / "archive.log"),
+        ],
+    )
+    session = requests.Session()
+    session.headers["User-Agent"] = USER_AGENT
+    kinds = set(args.kinds) if args.kinds else None
+    try:
+        if args.step == "events":
+            find_events(session)
+        elif args.step == "prices":
+            archive_prices(session, kinds)
+        else:
+            archive_trades(session, kinds or {"moneyline"})
+    except Refused as err:
+        log.error("stopped: %s", err)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

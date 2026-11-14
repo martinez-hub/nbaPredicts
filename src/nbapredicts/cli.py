@@ -36,6 +36,11 @@ def main(argv: list[str] | None = None) -> None:
         help="after-the-fact predictions for finished games the daily job missed",
     )
 
+    sub.add_parser(
+        "text-log",
+        help="append ESPN's injury notes and news to data_local/ (kept off the repo)",
+    )
+
     p = sub.add_parser("backtest", help="walk-forward evaluation of both models")
     p.add_argument("--seasons", type=int, nargs="+", default=None)
     p.add_argument("--player-sample", type=int, default=3000)
@@ -82,6 +87,19 @@ def main(argv: list[str] | None = None) -> None:
         now = pd.Timestamp.now(tz="UTC")
         print(
             json.dumps(backfill(root, store, current_season(now.to_pydatetime()), now))
+        )
+
+    elif args.command == "text-log":
+        import pandas as pd
+
+        from .text_log import log_text
+
+        now = pd.Timestamp.now(tz="UTC")
+        local = Store(root / "data_local")
+        print(
+            json.dumps(
+                log_text(local, client, now, current_season(now.to_pydatetime()))
+            )
         )
 
     elif args.command == "backtest":
