@@ -12,3 +12,5 @@ logs/
 models/
 # The research plan stays private: kept locally, out of the public repo.
 docs/research_plan.md
+# Third-party text (injury notes, news) collected for experiments; not ours to publish.
+data_local/
