@@ -154,12 +154,15 @@ def main(argv: list[str] | None = None) -> None:
         state = team_state(games, team_box, pv, [])
         feats = build_features(games, state, [])
         teams = json.loads((root / "data" / "teams.json").read_text())
+        from .injury_history import load_history
+
+        reports = load_history(root, games, teams, pd.Timestamp.now(tz="UTC"))
         feats = apply_pregame_availability(
             feats,
             pregame_availability(
                 pv,
                 games,
-                store.load("injury_reports"),
+                reports,
                 {t["name"]: tid for tid, t in teams.items()},
             ),
         )
@@ -167,9 +170,7 @@ def main(argv: list[str] | None = None) -> None:
         team_ids = {t["name"]: tid for tid, t in teams.items()}
         feats = apply_impact(
             feats,
-            pregame_impact(
-                pv, player_box, games, store.load("injury_reports"), team_ids, ratings
-            ),
+            pregame_impact(pv, player_box, games, reports, team_ids, ratings),
         )
         winner = backtest_winner(
             feats, seasons, odds=store.load("odds"), features=MODEL_FEATURES

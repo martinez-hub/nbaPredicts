@@ -30,6 +30,7 @@ import pandas as pd
 
 from nbapredicts.collect import Store
 from nbapredicts.features import player_values, team_state
+from nbapredicts.injury_history import load_history
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/results/timesfm_margin"
@@ -89,9 +90,9 @@ def features(
         store.load("team_box"),
         store.load("player_box"),
     )
-    if reports is None:
-        reports = store.load("injury_reports")
     teams = json.loads((ROOT / "data/teams.json").read_text())
+    if reports is None:
+        reports = load_history(ROOT, games, teams, pd.Timestamp.now(tz="UTC"))
     team_ids = {t["name"]: tid for tid, t in teams.items()}
     pv = player_values(pb, games)
     feats = build_features(games, team_state(games, tb, pv, []), [])

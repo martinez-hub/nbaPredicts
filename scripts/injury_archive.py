@@ -1,4 +1,8 @@
-"""Build the history of official NBA injury reports from the Wayback Machine.
+"""Historical: the daily job no longer reads data/injury_reports; it
+rebuilds the history each run (src/nbapredicts/injury_history.py). Kept
+for the record of how the 2018-19..2025-26 history was first built.
+
+Build the history of official NBA injury reports from the Wayback Machine.
 
 The league's report PDFs (ak-static.cms.nba.com/referee/injury/...) stay on
 its CDN for roughly a season; the Wayback Machine has ~14,500 of them from

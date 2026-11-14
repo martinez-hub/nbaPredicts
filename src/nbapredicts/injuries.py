@@ -239,28 +239,3 @@ def report_time(url: str) -> datetime | None:
     return datetime.strptime(
         f"{day} {hour}:{minute or '00'} {half}", "%Y-%m-%d %I:%M %p"
     )
-
-
-def record_report(store: Any, raw: pd.DataFrame, url: str | None, season: int) -> bool:
-    """Add today's report to ``data/injury_reports`` (same rule as the archive).
-
-    A day keeps its latest report published by ``REPORT_CUTOFF``; later
-    reports are not recorded, so the history matches what the evening run
-    (and the backfilled seasons) saw.
-    """
-    published = report_time(url) if url else None
-    if raw.empty or published is None:
-        return False
-    if (published.hour, published.minute) > REPORT_CUTOFF:
-        return False
-    day, stamp = published.strftime("%Y-%m-%d"), published.strftime("%Y-%m-%d %H:%M")
-    cols = ["team", "player", "status", "reason", "game_date"]
-    rows = raw.reindex(columns=cols).assign(day=day, published=stamp, season=season)
-    old = store.load("injury_reports")
-    if not old.empty:
-        same_day = old["day"] == day
-        if same_day.any() and old.loc[same_day, "published"].max() >= stamp:
-            return False
-        rows = pd.concat([old[~same_day], rows], ignore_index=True)
-    store.save("injury_reports", rows)
-    return True

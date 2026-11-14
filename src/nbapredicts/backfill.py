@@ -44,7 +44,8 @@ from .forecast import (
     team_frame,
 )
 from .impact import apply_impact, monthly_ratings, pregame_impact
-from .injuries import _HEADERS, REPORT_CUTOFF, parse_report, record_report
+from .injuries import _HEADERS, REPORT_CUTOFF
+from .injury_history import load_history
 from .stack import StackedWinner
 from .winner import WinnerConfig, fit
 
@@ -78,24 +79,6 @@ def report_by_cutoff(day: str) -> tuple[str, bytes] | None:
     return None
 
 
-def fill_reports(
-    store: Store, teams: dict[str, Any], days: list[str], season: int
-) -> list[str]:
-    """Record the cutoff report for each of ``days``; returns the days added."""
-    names = [t["name"] for t in teams.values()]
-    added = []
-    for day in days:
-        found = report_by_cutoff(day)
-        if found is None:
-            log.warning("no injury report for %s", day)
-            continue
-        url, pdf = found
-        if record_report(store, parse_report(pdf, names), url, season):
-            added.append(day)
-            log.info("recorded %s", url.rsplit("/", 1)[-1])
-    return added
-
-
 def backfill(
     root: Path, store: Store, season: int, now: pd.Timestamp
 ) -> dict[str, Any]:
@@ -110,13 +93,10 @@ def backfill(
         return {"games": 0}
     days = sorted(str(d) for d in todo["date"].unique())
     teams = json.loads((root / "data/teams.json").read_text())
-    # Every finished game day, so later games' availability history is whole too.
-    reports = fill_reports(
-        store, teams, sorted(str(d) for d in finals["date"].unique()), season
-    )
 
     team_box, player_box = store.load("team_box"), store.load("player_box")
-    injury_reports, odds = store.load("injury_reports"), store.load("odds")
+    injury_reports = load_history(root, games, teams, now)
+    odds = store.load("odds")
     team_ids = {t["name"]: tid for tid, t in teams.items()}
     pv = player_values(player_box, games)
     state = team_state(games, team_box, pv, [])
@@ -212,4 +192,4 @@ def backfill(
     if not preds.empty:
         rows = rows[~rows["game_id"].isin(preds["game_id"])]
     store.save("predictions", pd.concat([preds, rows], ignore_index=True))
-    return {"games": int(len(rows)), "days": days, "reports_added": reports}
+    return {"games": int(len(rows)), "days": days}
