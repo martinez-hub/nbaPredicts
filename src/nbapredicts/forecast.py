@@ -274,20 +274,24 @@ def forecast_player_lines(
     if injuries is not None and not injuries.empty:
         status = dict(zip(injuries["athlete_id"], injuries["status"], strict=False))
 
+    history = dict(tuple(pf.groupby("athlete_id", sort=False)))
+
+    # Drop players who are out or lack history before taking the top 10, so
+    # the next ones in line fill their places.
+    def can_play(athlete_id: str) -> bool:
+        out = str(status.get(athlete_id, "")).lower() == "out"
+        return not out and len(history.get(athlete_id, ())) >= MIN_GAMES
+
+    eligible = rosters["athlete_id"].map(can_play).astype(bool)
     rotation = (
-        rosters[rosters["team_id"].isin(fut_by_team)]
+        rosters[eligible & rosters["team_id"].isin(fut_by_team)]
         .sort_values("post_value", ascending=False)
         .groupby("team_id")
         .head(PLAYERS_PER_TEAM)
     )
-    history = dict(tuple(pf.groupby("athlete_id", sort=False)))
     jobs, keys = [], []
     for p in rotation.itertuples(index=False):
-        hist = history.get(p.athlete_id)
-        if hist is None or len(hist) < MIN_GAMES:
-            continue
-        if str(status.get(p.athlete_id, "")).lower() == "out":
-            continue
+        hist = history[p.athlete_id]
         fut = fut_by_team[p.team_id]
         for stat in PLAYER_STATS:
             jobs.append(_job(hist.dropna(subset=[stat]), fut, stat))
