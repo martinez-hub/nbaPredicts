@@ -54,11 +54,11 @@ class Refused(RuntimeError):
     """The server refused us; the run stops instead of working around it."""
 
 
-def get(session: requests.Session, url: str, **params) -> object:
+def request(session: requests.Session, method: str, url: str, **kwargs) -> object:
     for attempt in range(6):
         time.sleep(PAUSE)
         try:
-            resp = session.get(url, params=params, timeout=60)
+            resp = session.request(method, url, timeout=60, **kwargs)
         except requests.RequestException as err:
             log.warning("%s: %s (retry %d)", url, err, attempt + 1)
             time.sleep(10 * (attempt + 1))
@@ -73,6 +73,14 @@ def get(session: requests.Session, url: str, **params) -> object:
         resp.raise_for_status()
         return resp.json()
     raise RuntimeError(f"{url} kept failing")
+
+
+def get(session: requests.Session, url: str, **params) -> object:
+    return request(session, "GET", url, params=params)
+
+
+def post(session: requests.Session, url: str, body: dict) -> dict:
+    return request(session, "POST", url, json=body)
 
 
 def write_json(path: Path, obj: object) -> None:
@@ -195,49 +203,69 @@ def _time(text: str | None) -> datetime | None:
     return pd.Timestamp(text).tz_convert(UTC).to_pydatetime()
 
 
-def price_history(session: requests.Session, token: str, start, end) -> list[dict]:
-    """1-minute points, a day per request (a request returns at most a
-    day's worth at this fidelity)."""
-    points: dict[int, float] = {}
+BATCH = 20  # tokens per batch request (the endpoint's limit)
+
+
+def batch_history(session: requests.Session, tokens: list[str], start, end) -> dict:
+    """1-minute points for up to 20 tokens over one window, a day per
+    request; the same points as ``price_history`` token by token."""
+    points: dict[str, dict[int, float]] = {t: {} for t in tokens}
     t = start
     while t < end:
         stop = min(t + timedelta(days=1), end)
-        page = get(
+        page = post(
             session,
-            f"{CLOB}/prices-history",
-            market=token,
-            startTs=int(t.timestamp()),
-            endTs=int(stop.timestamp()),
-            fidelity=1,
+            f"{CLOB}/batch-prices-history",
+            {
+                "markets": tokens,
+                "start_ts": int(t.timestamp()),
+                "end_ts": int(stop.timestamp()),
+                "fidelity": 1,
+            },
         )
-        for pt in page.get("history", []):
-            points[int(pt["t"])] = float(pt["p"])
+        for token, hist in (page.get("history") or {}).items():
+            for pt in hist:
+                points.setdefault(token, {})[int(pt["t"])] = float(pt["p"])
         t = stop
-    return [{"t": k, "p": points[k]} for k in sorted(points)]
+    return {
+        tok: [{"t": k, "p": pts[k]} for k in sorted(pts)] for tok, pts in points.items()
+    }
 
 
 def archive_prices(session: requests.Session, kinds: set[str] | None) -> None:
-    todo = markets(kinds)
-    log.info("%d markets", len(todo))
-    for i, (slug, m) in enumerate(todo):
-        start = _time(m.get("startDate")) or _time(m.get("createdAt"))
-        end = _time(m.get("closedTime")) or _time(m.get("endDate"))
-        if not start or not end:
-            continue
-        end += timedelta(hours=1)
+    """Every market of every game, 20 tokens per request over the game's
+    window. Both sides of a moneyline (``p`` may not be complementary), one
+    side elsewhere."""
+    jobs: dict[str, list[tuple[Path, str, dict]]] = {}
+    for slug, m in markets(kinds):
         tokens = json.loads(m.get("clobTokenIds") or "[]")
-        # Both sides of a moneyline (``p`` may not be complementary); one
-        # side elsewhere.
         if (m.get("sportsMarketType") or "moneyline") != "moneyline":
             tokens = tokens[:1]
         for side, token in enumerate(tokens):
             path = OUT / "prices" / slug / f"{m['id']}_{side}.json.gz"
-            if path.exists():
+            if not path.exists():
+                jobs.setdefault(slug, []).append((path, token, m))
+    log.info("%d tokens to fetch in %d games", sum(map(len, jobs.values())), len(jobs))
+    for i, todo in enumerate(jobs.values()):
+        for k in range(0, len(todo), BATCH):
+            group = todo[k : k + BATCH]
+            starts = [
+                _time(m.get("startDate")) or _time(m.get("createdAt"))
+                for *_, m in group
+            ]
+            ends = [
+                _time(m.get("closedTime")) or _time(m.get("endDate")) for *_, m in group
+            ]
+            if not any(starts) or not any(ends):
                 continue
-            hist = price_history(session, token, start, end)
-            write_json(path, {"market": m["id"], "token": token, "history": hist})
-        if i % 100 == 0:
-            log.info("prices: %d of %d markets", i, len(todo))
+            start = min(s for s in starts if s)
+            end = max(e for e in ends if e) + timedelta(hours=1)
+            got = batch_history(session, [tok for _, tok, _ in group], start, end)
+            for path, token, m in group:
+                hist = got.get(token, [])
+                write_json(path, {"market": m["id"], "token": token, "history": hist})
+        if i % 50 == 0:
+            log.info("prices: %d of %d games", i, len(jobs))
     log.info("prices done")
 
 
