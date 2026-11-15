@@ -242,3 +242,30 @@ def test_first_line_survives_a_slate_with_no_earlier_picks():
     assert out["first_line_at"].tolist()[0] == "2026-11-14T17:00:00Z"
     assert out["first_line_p_market"].tolist()[0] == 0.58
     assert pd.isna(out["first_line_at"].iloc[1])
+
+
+def test_first_line_survives_a_slate_with_no_lines_at_all():
+    from nbapredicts.pipeline import with_first_line
+
+    # No line posted for any game yet: p_market is all missing, stored as
+    # objects, the way pd.DataFrame(pred_rows) builds it.
+    new = pd.DataFrame(
+        {
+            "game_id": ["7", "8"],
+            "predicted_at": ["2026-11-15T01:15:00Z"] * 2,
+            "p_home": [0.6, 0.5],
+            "p_market": [None, None],
+        }
+    )
+    old = pd.DataFrame(
+        {
+            "game_id": ["0"],
+            "first_line_at": ["2026-11-01T10:00:00Z"],
+            "first_line_p_home": [0.6],
+            "first_line_p_market": [0.55],
+        }
+    )
+    for previous in (old, pd.DataFrame()):
+        out = with_first_line(new, previous)
+        assert out["first_line_at"].isna().all()
+        assert out["first_line_p_market"].isna().all()

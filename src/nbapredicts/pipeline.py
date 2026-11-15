@@ -184,22 +184,30 @@ def with_first_line(new: pd.DataFrame, old: pd.DataFrame) -> pd.DataFrame:
     nearly the close. The first pick with a line, and that line, show
     whether the model knew something the market priced in only later.
     """
+    # Whole columns with explicit types: pandas 3 rejects partial copies
+    # across dtypes, even empty ones (a slate with no line, or no earlier
+    # pick, failed two daily runs that way).
     new = new.copy()
-    new["first_line_at"] = pd.Series(np.nan, index=new.index, dtype=object)
-    new["first_line_p_home"] = np.nan
-    new["first_line_p_market"] = np.nan
+    at = pd.Series(np.nan, index=new.index, dtype=object)
+    p_home = pd.Series(np.nan, index=new.index, dtype=float)
+    p_market = pd.Series(np.nan, index=new.index, dtype=float)
     if not old.empty and "first_line_at" in old:
-        prev = old.dropna(subset=["first_line_at"]).set_index("game_id")[FIRST_LINE]
-        kept = new["game_id"].isin(prev.index)
-        # pandas 3 rejects even an empty copy across dtypes (text into an
-        # all-missing float column), so copy only when a game has a pick.
-        if kept.any():
-            for c in FIRST_LINE:
-                new.loc[kept, c] = new.loc[kept, "game_id"].map(prev[c])
-    fresh = new["first_line_at"].isna() & new["p_market"].notna()
-    new.loc[fresh, "first_line_at"] = new.loc[fresh, "predicted_at"]
-    new.loc[fresh, "first_line_p_home"] = new.loc[fresh, "p_home"]
-    new.loc[fresh, "first_line_p_market"] = new.loc[fresh, "p_market"]
+        prev = (
+            old.dropna(subset=["first_line_at"])
+            .drop_duplicates("game_id", keep="last")
+            .set_index("game_id")
+        )
+        gid = new["game_id"]
+        at = gid.map(prev["first_line_at"]).astype(object)
+        p_home = pd.to_numeric(gid.map(prev["first_line_p_home"]), errors="coerce")
+        p_market = pd.to_numeric(gid.map(prev["first_line_p_market"]), errors="coerce")
+    market = pd.to_numeric(new["p_market"], errors="coerce")
+    fresh = at.isna() & market.notna()
+    new["first_line_at"] = at.where(~fresh, new["predicted_at"].astype(object))
+    new["first_line_p_home"] = p_home.where(
+        ~fresh, pd.to_numeric(new["p_home"], errors="coerce")
+    )
+    new["first_line_p_market"] = p_market.where(~fresh, market)
     return new
 
 
