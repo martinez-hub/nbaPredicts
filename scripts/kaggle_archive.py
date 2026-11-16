@@ -8,6 +8,8 @@
 - wyattowalsh/basketball (CC BY-SA 4.0): a SQLite database of NBA.com data
   back to 1946-47.
 - ghopkins/nba-injuries-2010-2018 (CC0): injuries 2010-11 to 2019-20.
+- Betting lines from 2007 on: five sets whose uploaders chose CC0 or
+  CC BY-SA (kept local; the lines come from sportsbook archives).
 
 Kaggle downloads need the owner's account: the API token in
 ~/.kaggle/access_token (or KAGGLE_API_TOKEN) is sent to kaggle.com only, as
@@ -34,6 +36,13 @@ DATASETS = {
     "eoinamoore/historical-nba-data-and-player-box-scores": "CC0",
     "wyattowalsh/basketball": "CC BY-SA",
     "ghopkins/nba-injuries-2010-2018": "CC0",
+    # Betting lines back to 2007 (licences as the uploaders set them; the
+    # lines trace back to sportsbook archives, so they stay local).
+    "cviaxmiwnptr/nba-betting-data-october-2007-to-june-2024": "CC0",
+    "erichqiu/nba-odds-and-scores": "CC0",
+    "thedevastator/uncovering-hidden-trends-in-nba-betting-lines-20": "CC0",
+    "marcuslin/marcuslin-nbadata": "CC0",
+    "caseydurfee/mgm-grand-nba-betting-data": "CC BY-SA",
 }
 
 log = logging.getLogger("kaggle_archive")
