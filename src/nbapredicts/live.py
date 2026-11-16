@@ -68,6 +68,10 @@ GAMMA_EVENTS = "https://gamma-api.polymarket.com/events"
 CLOB_BOOKS = "https://clob.polymarket.com/books"
 NBA_SERIES = 10345
 ESPN_CORE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
+# Each game day's crews, posted about 9 AM ET (robots.txt allows the page,
+# not its dated query-string versions).
+REFEREES = "https://official.nba.com/referee-assignments/"
+CREW_FIELDS = ("game", "crew_chief", "referee", "umpire", "alternate")
 
 # Minutes between runs of each task (launchd starts a pass every 2 minutes).
 CADENCE = {
@@ -79,6 +83,7 @@ CADENCE = {
     "espn_odds": 10,
     "espn_text": 10,
     "espn_feeds": 60,
+    "referees": 60,
 }
 
 
@@ -172,6 +177,22 @@ def save_if_changed(folder: Path, name: str, text: str, state: dict, key: str) -
         f.write(text)
     hashes[key] = digest
     return True
+
+
+def referee_crews(html: str) -> list[dict]:
+    """Rows of the assignments tables (NBA first, then G League); empty
+    until the day's crews are posted."""
+    crews = []
+    tables = re.findall(r"<table.*?</table>", html, re.S)
+    for i, table in enumerate(tables):
+        for row in re.findall(r"<tr.*?</tr>", table, re.S):
+            cells = [
+                re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", c)).strip()
+                for c in re.findall(r"<td.*?</td>", row, re.S)
+            ]
+            if len(cells) == len(CREW_FIELDS) and cells[0]:
+                crews.append({"table": i, **dict(zip(CREW_FIELDS, cells, strict=True))})
+    return crews
 
 
 def book_rows(books: list[dict], meta: dict, seen_at: str) -> list[dict]:
@@ -434,6 +455,18 @@ class Logger:
             text = json.dumps(data, sort_keys=True)
             saved += save_if_changed(folder, name, text, self.state, f"espn/{feed}")
         return saved
+
+    def referees(self) -> int:
+        resp = self.get(REFEREES)
+        if resp.status_code != 200:
+            return 0
+        crews = referee_crews(resp.text)
+        if not crews:
+            return 0  # not posted yet
+        folder = self.out / "referees" / str(self.today)
+        text = json.dumps(crews, sort_keys=True)
+        name = self.now.strftime("%H%M%S")
+        return int(save_if_changed(folder, name, text, self.state, "referees"))
 
     # Driver --------------------------------------------------------------
 

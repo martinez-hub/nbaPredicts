@@ -124,3 +124,27 @@ def test_sweep_moves_only_finished_days_and_months(tmp_path):
     assert (archive / "rss/2026-10.csv").exists()
     assert (staging / "lineups/2026-11-14/200000.json.gz").exists()
     assert (staging / "rss/2026-11.csv").exists() and (staging / "state.json").exists()
+
+
+REFS = """<h2>NBA</h2><table><thead><tr><th>Game</th><th>Crew Chief</th>
+<th>Referee</th><th>Umpire</th><th>Alternate</th></tr></thead><tbody>
+<tr><td>Boston @ Miami</td><td><a href="#">Scott Foster (#48)</a></td>
+<td>Ed Malloy (#14)</td><td>Natalie Sago (#9)</td><td></td></tr>
+</tbody></table><h2>G League</h2><table><thead><tr><th>Game</th>
+<th>Crew Chief</th><th>Referee</th><th>Umpire</th><th>Alternate</th></tr>
+</thead><tbody></tbody></table>"""
+
+
+def test_referee_crews_are_read_from_the_assignments_page():
+    crews = live.referee_crews(REFS)
+    assert crews == [
+        {
+            "table": 0,
+            "game": "Boston @ Miami",
+            "crew_chief": "Scott Foster (#48)",
+            "referee": "Ed Malloy (#14)",
+            "umpire": "Natalie Sago (#9)",
+            "alternate": "",
+        }
+    ]
+    assert live.referee_crews(REFS.split("<tr><td>Boston")[0]) == []
