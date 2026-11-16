@@ -38,10 +38,10 @@ RELEASE_FILE = (
 )
 FIRST_SEASON = 2019  # the copy starts 2018-12-17
 FIRST_DAY = "2018-12-17"
-# Before this day the league named each hourly file for the hour while the
-# copy stamps it at half past; from it on, files come every 15 minutes and
-# names match the times.
-SWITCH = pd.Timestamp("2025-12-21")
+# The copy's report_datetime is when each version went up: the file named
+# 05PM prints "as of 05:30 PM" and the CDN's Last-Modified for it is 5:30 PM
+# ET (checked 2019-2026); from 2025-12-21 names carry the minutes. Earlier
+# code stamped hourly files with the hour in their name, 30 minutes early.
 COLUMNS = (
     "team",
     "player",
@@ -63,8 +63,7 @@ def daily_reports(release: pd.DataFrame) -> pd.DataFrame:
     rel = release[release["report_player_name"].notna()].copy()
     if rel.empty:
         return pd.DataFrame(columns=list(COLUMNS))
-    t = pd.to_datetime(rel["report_datetime"])
-    published = t.where(t >= SWITCH, t - pd.Timedelta(minutes=30))
+    published = pd.to_datetime(rel["report_datetime"])
     rel["published_ts"] = published
     rel["day"] = published.dt.strftime("%Y-%m-%d")
     minutes = published.dt.hour * 60 + published.dt.minute

@@ -24,7 +24,7 @@ def release(rows: list[tuple[str, str, str]]) -> pd.DataFrame:
 def test_each_day_keeps_its_last_version_by_the_cutoff():
     rel = release(
         [
-            # Hourly era: the hh:30 version is the file named for hh:00.
+            # Hourly era: the file named 06PM is as of, and went up at, 6:30.
             ("2024-01-15 17:30", "Doe, Jon", "Questionable"),
             ("2024-01-15 18:30", "Doe, Jon", "Out"),  # the 06PM file: kept
             ("2024-01-15 19:30", "Doe, Jon", "Available"),  # 07PM: too late
@@ -37,7 +37,9 @@ def test_each_day_keeps_its_last_version_by_the_cutoff():
     out = ih.daily_reports(rel).sort_values("day").reset_index(drop=True)
     assert out["day"].tolist() == ["2024-01-15", "2026-01-15"]
     assert out["status"].tolist() == ["Out", "Doubtful"]
-    assert out["published"].tolist() == ["2024-01-15 18:00", "2026-01-15 18:30"]
+    # Published is when the report went up (its printed as-of time; the CDN's
+    # Last-Modified agrees within seconds), not the hour in the file name.
+    assert out["published"].tolist() == ["2024-01-15 18:30", "2026-01-15 18:30"]
     assert list(out.columns) == list(ih.COLUMNS)
 
 
