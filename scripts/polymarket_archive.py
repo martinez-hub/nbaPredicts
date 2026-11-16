@@ -65,7 +65,7 @@ def request(session: requests.Session, method: str, url: str, **kwargs) -> objec
             continue
         if resp.status_code in (401, 403, 451):
             raise Refused(f"{resp.status_code} from {resp.url}")
-        if resp.status_code in (429, 503):
+        if resp.status_code in (429, 500, 502, 503, 504):
             wait = float(resp.headers.get("Retry-After") or 10 * (attempt + 1))
             log.warning("%s: %d, waiting %.0f s", url, resp.status_code, wait)
             time.sleep(wait)
@@ -279,6 +279,17 @@ def archive_prices(session: requests.Session, kinds: set[str] | None) -> None:
     log.info("prices done")
 
 
+def market_trades(session: requests.Session, condition: str) -> list[dict]:
+    rows, cursor = [], None
+    while True:
+        params = {"cursor": cursor} if cursor else {"limit": 1000}
+        page = get(session, f"{DATA}/v2/trades", condition=condition, **params)
+        rows += [{k: r.get(k) for k in TRADE_FIELDS} for r in page.get("data", [])]
+        cursor = (page.get("pagination") or {}).get("next_cursor")
+        if not cursor:
+            return rows
+
+
 def archive_trades(session: requests.Session, kinds: set[str] | None) -> None:
     """Every fill (taker side once), newest first as served. Only time, side,
     outcome, price and size are kept: no wallets or names."""
@@ -288,16 +299,14 @@ def archive_trades(session: requests.Session, kinds: set[str] | None) -> None:
         path = OUT / "trades" / slug / f"{m['id']}.csv.gz"
         if path.exists() or not m.get("conditionId"):
             continue
-        rows, cursor = [], None
-        while True:
-            params = {"cursor": cursor} if cursor else {"limit": 1000}
-            page = get(
-                session, f"{DATA}/v2/trades", condition=m["conditionId"], **params
-            )
-            rows += [{k: r.get(k) for k in TRADE_FIELDS} for r in page.get("data", [])]
-            cursor = (page.get("pagination") or {}).get("next_cursor")
-            if not cursor:
-                break
+        try:
+            rows = market_trades(session, m["conditionId"])
+        except (RuntimeError, requests.HTTPError) as err:
+            if isinstance(err, Refused):
+                raise
+            # No file is written, so the next run tries this market again.
+            log.warning("trades: skipping %s for now: %s", m["id"], err)
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         with gzip.open(tmp, "wt", newline="") as f:
