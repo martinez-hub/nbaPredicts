@@ -156,8 +156,18 @@ def find_events(session: requests.Session) -> None:
     games = Store(ROOT / "data").load("games")
     games = games[(games["status"] == "final") & (games["start"] >= FIRST_DAY)]
     known = {p.name.removesuffix(".json.gz") for p in (OUT / "events").glob("*.gz")}
+    # Games already found missing stay missing once they are a few days old
+    # (Polymarket lists games ahead): don't look them up again every day.
+    missing_path = OUT / "missing_games.json"
+    was_missing = (
+        set(json.loads(missing_path.read_text())) if missing_path.exists() else set()
+    )
+    settled = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=3)
     missing = []
     for _, g in games.sort_values("start").iterrows():
+        if g["game_id"] in was_missing and g["start"] < settled:
+            missing.append(g["game_id"])
+            continue
         away, home = codes.get(g["away_id"]), codes.get(g["home_id"])
         if not away or not home:
             continue
@@ -176,7 +186,7 @@ def find_events(session: requests.Session) -> None:
         else:
             missing.append(g["game_id"])
     log.info("%d events on disk; %d games with no event", len(known), len(missing))
-    (OUT / "missing_games.json").write_text(json.dumps(missing))
+    missing_path.write_text(json.dumps(missing))
 
 
 def markets(kinds: set[str] | None) -> list[tuple[str, dict]]:
