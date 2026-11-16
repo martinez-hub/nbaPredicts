@@ -81,6 +81,38 @@ The stand-alone models gain; the published stack, which leans on the line,
 does not move. Sections written before the fix keep their numbers: each
 compared its models on the same inputs.
 
+Since 2026-11-14 the history is no longer committed (the rows are the
+league's data): each run rebuilds it (`src/nbapredicts/injury_history.py`)
+from sportsdataverse's free parsed copy of every version of the report,
+with the last four game days from the league's PDFs. The copy has every
+version, so each day's last report by 6:30 PM ET is the true one rather
+than the last the Wayback Machine happened to keep (the two picked the same
+version on 76% of days). The same backtest, committed history vs rebuilt:
+features-only EQUINE 0.20424 -> 0.20395 Brier pooled (better each season),
+logistic 0.20487 -> 0.20465, the published stack unchanged.
+
+Reports were also stamped 30 minutes early. Until 2025-12-21 the league
+named each file for the hour (`05PM`) and posted it at half past: the PDF
+prints "as of 05:30 PM" and the CDN's Last-Modified time is 5:30 PM ET
+(checked 2019-2026). With the true times, a few afternoon games no longer
+see a report posted after their tip-off; features-only EQUINE moves +0.0001
+Brier (the small leak gone) and the stack is unchanged.
+
+Before the official report's history (2012-13 to 2018-12-16), training
+games count every player as available. `scripts/availability_2012_18.py`
+filled them from archived ESPN and CBS injury pages (the latest copy before
+tip-off, at most 36 hours old; 26,207 rows on 923 of 1,307 game days, ESPN's
+Out / Day-To-Day as listed, CBS's wording translated). It did not help:
+
+| Brier, 2012-18 archive added minus without | 2023-24 | 2024-25 | 2025-26 |
+|---|---|---|---|
+| Features-only EQUINE | +0.00002 | -0.00002 | +0.00040 |
+| Logistic | -0.00016 | +0.00008 | -0.00010 |
+| Published stack | +0.00005 | +0.00000 | +0.00005 |
+
+Not deployed: a third of the days have no copy, and ESPN's catch-all
+Day-To-Day is a weak signal next to the official report's statuses.
+
 ## Player impact (minutes-weighted plus-minus)
 
 `scripts/impact_eval.py`. Game-level adjusted plus-minus ratings (ridge 5,
