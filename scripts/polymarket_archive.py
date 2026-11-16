@@ -322,14 +322,16 @@ def main() -> None:
     )
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
-    kinds = set(args.kinds) if args.kinds else None
+    # "--kinds all" means every market type (trades default to moneylines).
+    every = args.kinds == ["all"]
+    kinds = set(args.kinds) if args.kinds and not every else None
     try:
         if args.step == "events":
             find_events(session)
         elif args.step == "prices":
             archive_prices(session, kinds)
         else:
-            archive_trades(session, kinds or {"moneyline"})
+            archive_trades(session, None if every else kinds or {"moneyline"})
     except Refused as err:
         log.error("stopped: %s", err)
         sys.exit(2)
