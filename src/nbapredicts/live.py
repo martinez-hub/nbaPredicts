@@ -1,11 +1,9 @@
 """What was known when: a logger for feeds that keep only their current state.
 
-The hypothesis the project is testing is that any edge over the betting
-market sits between news breaking and prices moving. Testing it needs, with
-timestamps: who is starting and who is out (the NBA's daily lineups file),
-what reporters and news feeds said and when (Bluesky, RSS, ESPN), and what
-the prices were (Polymarket's order book, ESPN's current odds). None of these
-keep a history, so the Mac records them as they change, every two minutes.
+The NBA's daily lineups file (who is starting, who is out), reporters' and
+news feeds' posts (Bluesky, RSS, ESPN) and current prices (Polymarket's order
+book, ESPN's odds) keep no history. The Mac records them as they change,
+every two minutes, each with the time it was first seen.
 
 What can be fetched again later (the 15-minute injury-report PDFs, settled
 Polymarket history) is not logged here. Everything stays local: third-party

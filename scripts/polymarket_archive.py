@@ -1,10 +1,9 @@
 """Archive Polymarket's NBA game prices (1-minute) and trades, kept local.
 
-The question these answer: after a player's status changes, how long does
-the market take to price it? That needs prices with timestamps, and
-Polymarket's are free from 2024-25. Its CLOB still serves 1-minute history
-for settled markets, but its newer API keeps 1-minute data for only about a
-week, so the history is archived while it is served.
+Polymarket's prices carry timestamps and are free from 2024-25. Its CLOB
+still serves 1-minute history for settled markets, but its newer API keeps
+1-minute data for only about a week, so the history is archived while it is
+served.
 
 Research only: nothing here trades. Everything stays in data_local/ (never
 the repo or the site), requests go one at a time with a plain client name,
@@ -197,7 +196,7 @@ def markets(kinds: set[str] | None) -> list[tuple[str, dict]]:
             kind = m.get("sportsMarketType") or "moneyline"
             if kinds is None or kind in kinds:
                 out.append((event["slug"], m))
-    # Moneylines first: they are what the timing test needs.
+    # Moneylines first, then the other market types.
     out.sort(key=lambda sm: (sm[1].get("sportsMarketType") != "moneyline", sm[0]))
     return out
 
