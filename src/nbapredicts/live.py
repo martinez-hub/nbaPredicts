@@ -24,6 +24,7 @@ import json
 import logging
 import re
 import shutil
+import subprocess
 import xml.etree.ElementTree as ET
 from datetime import date
 from pathlib import Path
@@ -41,6 +42,7 @@ log = logging.getLogger(__name__)
 
 USER_AGENT = "research-client/1.0"
 MIN_FREE_BYTES = 5 * 1024**3  # stop writing below 5 GB free on the disk
+WARN_FREE_BYTES = 10 * 1024**3  # warn below 10 GB, before the logger stops
 EASTERN = "America/New_York"
 
 LINEUPS = "https://stats.nba.com/js/data/leaders/00_daily_lineups_{day}.json"
@@ -104,6 +106,33 @@ def due(state: dict, task: str, now: pd.Timestamp, minutes: int) -> bool:
 
 def mark(state: dict, task: str, now: pd.Timestamp) -> None:
     state.setdefault("last_run", {})[task] = now.isoformat()
+
+
+def disk_alert(free: int, state: dict, now: pd.Timestamp) -> str | None:
+    """The notification due for this much free space, if any: hourly once
+    the logger has stopped, every 12 hours while it is close to stopping."""
+    gb = f"{free / 1024**3:.1f} GB"
+    if free < MIN_FREE_BYTES:
+        task, minutes = "alert_stopped", 60
+        text = (
+            f"Live logger stopped: {gb} free on the internal disk. "
+            "Free some space (uv cache prune is a safe start)."
+        )
+    elif free < WARN_FREE_BYTES:
+        task, minutes = "alert_low", 12 * 60
+        text = f"{gb} free on the internal disk; the live logger stops at 5 GB."
+    else:
+        return None
+    if not due(state, task, now, minutes):
+        return None
+    mark(state, task, now)
+    return text
+
+
+def notify(text: str) -> None:
+    """A macOS notification: the logger runs unattended."""
+    script = f'display notification {json.dumps(text)} with title "nbaPredicts"'
+    subprocess.run(["osascript", "-e", script], capture_output=True, timeout=30)
 
 
 def rss_items(text: str) -> list[dict]:
@@ -470,8 +499,13 @@ class Logger:
 
     def run(self) -> dict:
         self.out.mkdir(parents=True, exist_ok=True)
-        if shutil.disk_usage(self.out).free < MIN_FREE_BYTES:
-            log.error("under 5 GB free on the disk: nothing logged (run live-sweep)")
+        free = shutil.disk_usage(self.out).free
+        alert = disk_alert(free, self.state, self.now)
+        if alert:
+            notify(alert)
+        if free < MIN_FREE_BYTES:
+            log.error("under 5 GB free on the disk: nothing logged")
+            self.save_state()
             return {"skipped": "low disk"}
         result = {}
         for task, minutes in CADENCE.items():
@@ -485,10 +519,13 @@ class Logger:
                 log.warning("%s failed: %s", task, err)
                 result[task] = f"failed: {err}"
             mark(self.state, task, self.now)
+        self.save_state()
+        return result
+
+    def save_state(self) -> None:
         tmp = self.state_path.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.state, indent=1))
         tmp.rename(self.state_path)
-        return result
 
 
 def run(root: Path) -> dict:

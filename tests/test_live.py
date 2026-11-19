@@ -148,3 +148,36 @@ def test_referee_crews_are_read_from_the_assignments_page():
         }
     ]
     assert live.referee_crews(REFS.split("<tr><td>Boston")[0]) == []
+
+
+GB = 1024**3
+
+
+def test_disk_alert_warns_before_the_logger_stops_then_waits():
+    state: dict = {}
+    first = live.disk_alert(8 * GB, state, NOW)
+    assert first and "8.0 GB" in first and "stops at 5 GB" in first
+    assert live.disk_alert(8 * GB, state, NOW + pd.Timedelta(hours=1)) is None
+    assert live.disk_alert(8 * GB, state, NOW + pd.Timedelta(hours=13))
+    assert live.disk_alert(50 * GB, {}, NOW) is None
+
+
+def test_disk_alert_repeats_hourly_once_the_logger_has_stopped():
+    state: dict = {}
+    # An earlier low-space warning does not delay the stop alert.
+    assert live.disk_alert(8 * GB, state, NOW)
+    first = live.disk_alert(3 * GB, state, NOW + pd.Timedelta(minutes=2))
+    assert first and "stopped" in first and "3.0 GB" in first
+    assert live.disk_alert(3 * GB, state, NOW + pd.Timedelta(minutes=30)) is None
+    assert live.disk_alert(3 * GB, state, NOW + pd.Timedelta(minutes=63))
+
+
+def test_logger_on_a_full_disk_alerts_once_and_remembers(tmp_path, monkeypatch):
+    shown = []
+    usage = type("Usage", (), {"free": 3 * GB})
+    monkeypatch.setattr(live.shutil, "disk_usage", lambda path: usage)
+    monkeypatch.setattr(live, "notify", shown.append)
+    assert live.Logger(tmp_path, NOW).run() == {"skipped": "low disk"}
+    later = NOW + pd.Timedelta(minutes=2)
+    assert live.Logger(tmp_path, later).run() == {"skipped": "low disk"}
+    assert len(shown) == 1 and "stopped" in shown[0]
