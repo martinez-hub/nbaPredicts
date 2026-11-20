@@ -12,10 +12,11 @@ scripts/history_archive.py saves.
   Action API, which gives the last 60 days for 50 titles a request (answered
   about 11 at a time). A gap longer than that goes back to the REST API.
 
-Wikimedia lets a client that gives no contact details in its User-Agent
-make about 10 requests a minute, so requests go one every 6.5 s and a 429
-waits for its Retry-After. Wikimedia revises past days' counts now and then;
-saved days are kept as they were fetched.
+Wikimedia asks clients to name a contact in the User-Agent and allows
+those about 200 requests a minute (10 without one). Requests here name the
+project's page and go one every 0.5 s; a 429 waits for its Retry-After.
+Wikimedia revises past days' counts now and then; saved days are kept as
+they were fetched.
 """
 
 from __future__ import annotations
@@ -40,9 +41,13 @@ VIEWS = (
 )
 SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 API = "https://en.wikipedia.org/w/api.php"
+# The project's page as the contact Wikimedia asks for.
+USER_AGENT = (
+    "nbaPredicts-research/1.0 (https://github.com/martinez-hub/nbaPredicts) "
+    f"python-requests/{requests.__version__}"
+)
 FIRST_DAY = "20150701"  # the first day Wikimedia's API has
-USER_AGENT = "research-client/1.0"
-PAUSE = 6.5  # seconds between requests: under 10 a minute
+PAUSE = 0.5  # seconds between requests: well under 200 a minute
 TRIES = 6
 BATCH = 50  # titles per Action API request (its limit without an account)
 MAX_GIVE_UPS = 5  # in a row: the API is not answering, so stop

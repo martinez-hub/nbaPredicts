@@ -16,7 +16,8 @@ reviews. Kept in data_local/history/.
   links on the league's file server (later reports sit behind a page that
   refuses plain clients, so they are not fetched).
 
-Requests go one at a time with a plain client name; files already on disk
+Requests go one at a time with a plain client name (Wikidata's name the
+project's page as a contact, as Wikimedia asks); files already on disk
 are skipped, except that ``--refresh`` queries Wikidata again and replaces
 its tables (new players, awards and seasons; the weekly refresh does this).
 """
@@ -36,6 +37,12 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data_local" / "history"
 USER_AGENT = "research-client/1.0"
+# Wikimedia asks clients to name a contact in the User-Agent (and limits the
+# ones that don't more tightly); the project's page is the contact.
+WIKIMEDIA_USER_AGENT = (
+    "nbaPredicts-research/1.0 (https://github.com/martinez-hub/nbaPredicts) "
+    f"python-requests/{requests.__version__}"
+)
 
 log = logging.getLogger("history_archive")
 
@@ -213,7 +220,10 @@ def wikidata_rows(s: requests.Session, query: str) -> list[dict] | None:
             resp = s.get(
                 SPARQL,
                 params={"query": query},
-                headers={"Accept": "application/sparql-results+json"},
+                headers={
+                    "Accept": "application/sparql-results+json",
+                    "User-Agent": WIKIMEDIA_USER_AGENT,
+                },
                 timeout=120,
             )
         except requests.RequestException as err:
@@ -224,7 +234,14 @@ def wikidata_rows(s: requests.Session, query: str) -> list[dict] | None:
             log.error("wikidata refused (%d): stopping", resp.status_code)
             sys.exit(2)
         if resp.status_code in (429, 500, 502, 503, 504):
-            time.sleep(float(resp.headers.get("Retry-After") or wait))
+            wait = float(resp.headers.get("Retry-After") or wait)
+            log.warning(
+                "wikidata: %d, waiting %.0fs (try %d)",
+                resp.status_code,
+                wait,
+                attempt + 1,
+            )
+            time.sleep(wait)
             continue
         resp.raise_for_status()
         try:
