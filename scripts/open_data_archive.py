@@ -2,6 +2,10 @@
 
     uv run python scripts/open_data_archive.py
 
+Run again (the weekly refresh does), a Hugging Face dataset is downloaded
+again only when its revision changed, and each repository pulls its latest
+commit.
+
 Hugging Face datasets (licence checked on each card, files from /resolve):
 - minmaxxxer: closing lines and results 2024-25, 2025-26 and 2026-27 odds
   (CC BY 4.0)
@@ -51,38 +55,45 @@ def hf_dataset(s: requests.Session, name: str, licence: str) -> None:
         return
     files = [x["rfilename"] for x in info.get("siblings", [])]
     folder = OUT / "huggingface" / name.replace("/", "__")
+    revision = info["sha"]
+    stamp = folder / ".revision"
+    if stamp.exists() and stamp.read_text().strip() == revision:
+        log.info("%s: unchanged", name)
+        return
     for f in files:
-        dest = folder / f
-        if dest.exists() or f == ".gitattributes":
+        if f == ".gitattributes":
             continue
+        dest = folder / f
         resp = s.get(
-            f"https://huggingface.co/datasets/{name}/resolve/main/{f}", timeout=300
+            f"https://huggingface.co/datasets/{name}/resolve/{revision}/{f}",
+            timeout=300,
         )
         resp.raise_for_status()
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(resp.content)
+        tmp = dest.with_name(dest.name + ".tmp")
+        tmp.write_bytes(resp.content)
+        tmp.rename(dest)
         time.sleep(0.2)
-    log.info("%s: %d files", name, len(files))
+    stamp.write_text(revision)
+    log.info("%s: %d files at revision %s", name, len(files), revision[:8])
 
 
 def repo(name: str) -> None:
     dest = OUT / "github" / name.replace("/", "__")
     if dest.exists():
-        subprocess.run(["git", "-C", str(dest), "pull", "-q", "--ff-only"], check=False)
-    else:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            [
-                "git",
-                "clone",
-                "-q",
-                "--depth",
-                "1",
-                f"https://github.com/{name}.git",
-                str(dest),
-            ],
-            check=True,
+        done = subprocess.run(
+            ["git", "-C", str(dest), "pull", "-q", "--ff-only"],
+            capture_output=True,
+            text=True,
         )
+        if done.returncode:
+            log.warning("%s: pull failed: %s", name, done.stderr.strip())
+        else:
+            log.info("%s: up to date", name)
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    url = f"https://github.com/{name}.git"
+    subprocess.run(["git", "clone", "-q", "--depth", "1", url, str(dest)], check=True)
     log.info("%s: cloned", name)
 
 

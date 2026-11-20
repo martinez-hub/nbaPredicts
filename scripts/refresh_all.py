@@ -16,15 +16,27 @@ Each step is independent: a failure is logged and the rest still run.
     nba_lineups      new game days
     injury_pdfs      new report versions
 
-It never touches git, runs one at a time (a lock on the internal disk),
-skips Polymarket while another Polymarket archive is running, and exits
-quietly when the SSD is not mounted.
+Weekly (when the last success is 6.5 days old or more; a failure retries
+the next morning):
+
+    wikidata         players, teams, awards, seasons queried again
+    wikipedia        new days of page views; new players' articles
+    open_data        Hugging Face datasets that changed; GitHub repos pulled
+    crosswalk        the id table rebuilt (new players and games)
+
+It first checks the internal disk (where the live logger writes) and posts
+a notification when space is low. It never touches the project's git, runs
+one at a time (a lock on the internal disk), skips Polymarket while another
+Polymarket archive is running, and exits quietly when the SSD is not
+mounted.
 """
 
 from __future__ import annotations
 
 import fcntl
+import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -32,7 +44,9 @@ from pathlib import Path
 
 ROOT = Path("/Volumes/ExtremeSSD/nbaPredicts")
 LOCK = Path.home() / ".local/share/nbapredicts/refresh.lock"
+STAMPS = Path.home() / ".local/share/nbapredicts/refresh_weekly.json"
 HOURS = 3600
+WEEKLY_AFTER = 6.5 * 24 * HOURS
 
 STEPS = [
     (
@@ -54,6 +68,13 @@ STEPS = [
     ("injury_pdfs", ["scripts/injury_pdf_archive.py"], 2 * HOURS),
 ]
 
+WEEKLY = [
+    ("wikidata", ["scripts/history_archive.py", "wikidata", "--refresh"], HOURS),
+    ("wikipedia", ["scripts/wikipedia_archive.py"], 2 * HOURS),
+    ("open_data", ["scripts/open_data_archive.py"], 2 * HOURS),
+    ("crosswalk", ["scripts/build_crosswalk.py"], HOURS),
+]
+
 
 def log(msg: str) -> None:
     print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}", flush=True)
@@ -67,7 +88,48 @@ def polymarket_busy() -> bool:
     return any(pid != mine for pid in out)
 
 
+def check_disk() -> None:
+    """Log the internal disk's free space; notify when the logger is close
+    to stopping (or has stopped)."""
+    free = shutil.disk_usage(Path.home()).free
+    log(f"internal disk: {free / 1024**3:.1f} GB free")
+    try:
+        import pandas as pd
+
+        from nbapredicts.live import disk_alert, notify
+
+        alert = disk_alert(free, {}, pd.Timestamp.now(tz="UTC"))
+        if alert:
+            notify(alert)
+    except Exception as err:  # the alert must not stop the refresh
+        log(f"disk alert failed: {err}")
+
+
+def run_step(name: str, args: list[str], timeout: int) -> bool:
+    start = time.time()
+    try:
+        done = subprocess.run(
+            [sys.executable, *args],
+            cwd=ROOT,
+            timeout=timeout,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.TimeoutExpired as err:
+        # What the step printed before it was stopped (bytes, even in text mode).
+        out = err.stderr or err.stdout or b""
+        if isinstance(out, bytes):
+            out = out.decode(errors="replace")
+        log(f"{name}: stopped after {timeout}s {out.strip().splitlines()[-1:]}")
+        return False
+    tail = (done.stderr or done.stdout).strip().splitlines()[-1:]
+    status = "ok" if done.returncode == 0 else f"exit {done.returncode}"
+    log(f"{name}: {status} in {time.time() - start:.0f}s {tail}")
+    return done.returncode == 0
+
+
 def main() -> None:
+    check_disk()
     if not os.path.ismount("/Volumes/ExtremeSSD"):
         log("SSD not mounted; nothing to do")
         return
@@ -87,20 +149,14 @@ def main() -> None:
             if name.startswith("polymarket") and polymarket_busy():
                 log(f"{name}: skipped (another Polymarket archive is running)")
                 continue
-            start = time.time()
-            try:
-                done = subprocess.run(
-                    [sys.executable, *args],
-                    cwd=ROOT,
-                    timeout=timeout,
-                    capture_output=True,
-                    text=True,
-                )
-                tail = (done.stderr or done.stdout).strip().splitlines()[-1:]
-                status = "ok" if done.returncode == 0 else f"exit {done.returncode}"
-                log(f"{name}: {status} in {time.time() - start:.0f}s {tail}")
-            except subprocess.TimeoutExpired:
-                log(f"{name}: stopped after {timeout}s")
+            run_step(name, args, timeout)
+        stamps = json.loads(STAMPS.read_text()) if STAMPS.exists() else {}
+        for name, args, timeout in WEEKLY:
+            if time.time() - stamps.get(name, 0) < WEEKLY_AFTER:
+                continue
+            if run_step(name, args, timeout):
+                stamps[name] = time.time()
+                STAMPS.write_text(json.dumps(stamps, indent=1))
     log("refresh done")
 
 

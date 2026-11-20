@@ -4,6 +4,7 @@ reviews. Kept in data_local/history/.
 
     uv run python scripts/history_archive.py fivethirtyeight  # CC BY 4.0
     uv run python scripts/history_archive.py wikidata         # CC0
+    uv run python scripts/history_archive.py wikidata --refresh  # weekly
     uv run python scripts/history_archive.py l2m              # NBA, local only
 
 - FiveThirtyEight's NBA folders (github.com/fivethirtyeight/data): Elo for
@@ -16,7 +17,8 @@ reviews. Kept in data_local/history/.
   refuses plain clients, so they are not fetched).
 
 Requests go one at a time with a plain client name; files already on disk
-are skipped.
+are skipped, except that ``--refresh`` queries Wikidata again and replaces
+its tables (new players, awards and seasons; the weekly refresh does this).
 """
 
 from __future__ import annotations
@@ -79,6 +81,17 @@ SPARQL = "https://query.wikidata.org/sparql"
 NBA = "wd:Q155223"
 PLAYER = "wd:Q3665646"
 COACH = "wd:Q5137571"
+# NBA players: the league on their item, or an NBA.com player id (many
+# current players carry only the id). The other player queries time out
+# with the list inline, so they join a copy the server builds once (a named
+# subquery); the players query keeps it inline, since with the named copy
+# its answer gets cut off.
+PLAYER_LIST = (
+    "SELECT DISTINCT ?p WHERE { "
+    f"{{ ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}. }} UNION {{ ?p wdt:P3647 []. }}"
+    " }"
+)
+NBA_PLAYERS = f"WITH {{ {PLAYER_LIST} }} AS %players"
 
 QUERIES = {
     # One row per player and value; the server times out if these are
@@ -86,7 +99,7 @@ QUERIES = {
     "players": f"""
 SELECT ?p ?pLabel ?birth ?death ?birthplaceLabel ?height ?weight ?nba_id
   ?bref_id ?espn_id ?article WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}.
+  {{ {PLAYER_LIST} }}
   OPTIONAL {{ ?p wdt:P569 ?birth. }}
   OPTIONAL {{ ?p wdt:P570 ?death. }}
   OPTIONAL {{ ?p wdt:P19 ?birthplace. }}
@@ -100,27 +113,39 @@ SELECT ?p ?pLabel ?birth ?death ?birthplaceLabel ?height ?weight ?nba_id
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}""",
     "player_positions": f"""
-SELECT ?p ?pos ?posLabel WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}; wdt:P413 ?pos.
+SELECT ?p ?pos ?posLabel
+{NBA_PLAYERS}
+WHERE {{
+  INCLUDE %players
+  ?p wdt:P413 ?pos.
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}""",
     "player_countries": f"""
-SELECT ?p ?country ?countryLabel WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}; wdt:P27 ?country.
+SELECT ?p ?country ?countryLabel
+{NBA_PLAYERS}
+WHERE {{
+  INCLUDE %players
+  ?p wdt:P27 ?country.
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}""",
     # Each spell with a team, with its start and end where recorded.
     "player_teams": f"""
-SELECT ?p ?team ?teamLabel ?start ?end WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}; p:P54 ?st.
+SELECT ?p ?team ?teamLabel ?start ?end
+{NBA_PLAYERS}
+WHERE {{
+  INCLUDE %players
+  ?p p:P54 ?st.
   ?st ps:P54 ?team.
   OPTIONAL {{ ?st pq:P580 ?start. }}
   OPTIONAL {{ ?st pq:P582 ?end. }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}""",
     "player_draft": f"""
-SELECT ?p ?team ?teamLabel ?when ?pick ?round WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}; p:P647 ?st.
+SELECT ?p ?team ?teamLabel ?when ?pick ?round
+{NBA_PLAYERS}
+WHERE {{
+  INCLUDE %players
+  ?p p:P647 ?st.
   ?st ps:P647 ?team.
   OPTIONAL {{ ?st pq:P585 ?when. }}
   OPTIONAL {{ ?st pq:P1545 ?pick. }}
@@ -128,8 +153,11 @@ SELECT ?p ?team ?teamLabel ?when ?pick ?round WHERE {{
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}""",
     "player_awards": f"""
-SELECT ?p ?award ?awardLabel ?when WHERE {{
-  ?p wdt:P118 {NBA}; wdt:P106 {PLAYER}; p:P166 ?st.
+SELECT ?p ?award ?awardLabel ?when
+{NBA_PLAYERS}
+WHERE {{
+  INCLUDE %players
+  ?p p:P166 ?st.
   ?st ps:P166 ?award.
   OPTIONAL {{ ?st pq:P585 ?when. }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
@@ -177,36 +205,63 @@ SELECT ?s ?sLabel ?start ?end ?winner ?winnerLabel WHERE {
 }
 
 
-def wikidata(s: requests.Session) -> None:
-    for name, query in QUERIES.items():
-        dest = OUT / "wikidata" / f"{name}.json"
-        if dest.exists():
-            continue
-        for attempt in range(4):
+def wikidata_rows(s: requests.Session, query: str) -> list[dict] | None:
+    """One query's rows, or None if no whole answer came back in 4 tries."""
+    for attempt in range(4):
+        wait = 30 * (attempt + 1)
+        try:
             resp = s.get(
                 SPARQL,
                 params={"query": query},
                 headers={"Accept": "application/sparql-results+json"},
                 timeout=120,
             )
-            if resp.status_code in (429, 500, 502, 503, 504):
-                time.sleep(float(resp.headers.get("Retry-After") or 30 * (attempt + 1)))
-                continue
-            if resp.status_code in (401, 403):
-                log.error("wikidata refused (%d): stopping", resp.status_code)
-                sys.exit(2)
-            resp.raise_for_status()
-            rows = [
-                {k: v["value"] for k, v in b.items()}
-                for b in resp.json()["results"]["bindings"]
-            ]
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(json.dumps(rows))
-            log.info("wikidata %s: %d rows", name, len(rows))
-            break
+        except requests.RequestException as err:
+            log.warning("wikidata: %s (try %d)", err, attempt + 1)
+            time.sleep(wait)
+            continue
+        if resp.status_code in (401, 403):
+            log.error("wikidata refused (%d): stopping", resp.status_code)
+            sys.exit(2)
+        if resp.status_code in (429, 500, 502, 503, 504):
+            time.sleep(float(resp.headers.get("Retry-After") or wait))
+            continue
+        resp.raise_for_status()
+        try:
+            bindings = resp.json()["results"]["bindings"]
+        except ValueError:
+            # The service can cut a large answer off mid-stream and still
+            # answer 200; the JSON then does not parse.
+            log.warning("wikidata: answer cut off (try %d)", attempt + 1)
+            time.sleep(wait)
+            continue
+        return [{k: v["value"] for k, v in b.items()} for b in bindings]
+    return None
+
+
+def wikidata(s: requests.Session, refresh: bool = False) -> None:
+    """Save each table; a table that does not come back whole (or comes
+    back empty) keeps its last copy, and the run exits 1 so the weekly
+    refresh tries again the next morning."""
+    failed = []
+    for name, query in QUERIES.items():
+        dest = OUT / "wikidata" / f"{name}.json"
+        if dest.exists() and not refresh:
+            continue
+        rows = wikidata_rows(s, query)
+        if not rows:
+            log.warning("wikidata %s: no whole answer; kept what was there", name)
+            failed.append(name)
         else:
-            log.warning("wikidata %s: gave up", name)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dest.with_suffix(".tmp")
+            tmp.write_text(json.dumps(rows))
+            tmp.rename(dest)
+            log.info("wikidata %s: %d rows", name, len(rows))
         time.sleep(5)
+    if failed:
+        log.error("wikidata: not refreshed: %s", ", ".join(failed))
+        sys.exit(1)
 
 
 # --------------------------------------------------------------------------
@@ -250,11 +305,17 @@ def main() -> None:
     parser.add_argument(
         "steps", nargs="+", choices=["fivethirtyeight", "wikidata", "l2m"]
     )
+    parser.add_argument(
+        "--refresh", action="store_true", help="query Wikidata again (weekly)"
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     s = session()
     for step in args.steps:
-        {"fivethirtyeight": fivethirtyeight, "wikidata": wikidata, "l2m": l2m}[step](s)
+        if step == "wikidata":
+            wikidata(s, refresh=args.refresh)
+        else:
+            {"fivethirtyeight": fivethirtyeight, "l2m": l2m}[step](s)
 
 
 if __name__ == "__main__":
