@@ -5,9 +5,11 @@ joined (the logger itself only sees new posts from 2026-11-14 on).
 
 Pages each account's feed through Bluesky's public API (no replies; reposts
 kept and marked) and writes data_local/history/bluesky/<handle>.csv.gz with
-the logger's columns. created_at is the time the posting client gives;
-indexed_at is when Bluesky received the post. A run fetches everything again
-and replaces the files, so it can be repeated to fill a gap in the logger.
+the logger's columns plus reposted_at (a repost's own time; its created_at and
+indexed_at are the original post's). created_at is the time the posting
+client gives; indexed_at is when Bluesky received the post. A run fetches
+everything again and replaces the files, so it can be repeated to fill a gap
+in the logger.
 """
 
 from __future__ import annotations
@@ -59,7 +61,9 @@ def account_history(s: requests.Session, handle: str) -> list[dict]:
     cursor = None
     while True:
         page = get_page(s, handle, cursor)
-        for post in bluesky_posts(page, handle):
+        entries = page.get("feed", [])
+        for entry, post in zip(entries, bluesky_posts(page, handle), strict=True):
+            post["reposted_at"] = (entry.get("reason") or {}).get("indexedAt")
             posts.setdefault(post["key"], post)
         cursor = page.get("cursor")
         if not cursor or not page.get("feed"):
